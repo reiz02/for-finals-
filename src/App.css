@@ -1,90 +1,230 @@
-/* =========================================
-   BASE RESET
-   ========================================= */
+/* RESET */
 * {
   margin: 0;
   padding: 0;
   box-sizing: border-box;
 }
 
-body, html {
-  height: 100%;
-  width: 100%;
-  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+body {
+  font-family: 'Inter', -apple-system, sans-serif;
+  overflow: hidden;
+  height: 100vh;
+  background-color: #f8fafc;
 }
 
-/* =========================================
-   MAIN APP LAYOUT
-   ========================================= */
-.App {
-  position: relative;
-  min-height: 100vh;
-  width: 100%;
-  text-align: center;
-  overflow-x: hidden;
-}
-
-/* 1. BACKGROUND IMAGE (Yung gh2.png painting) */
+/* BACKGROUND & OVERLAY */
 .main-bg-image {
-  position: fixed; 
+  position: fixed;
   top: 0;
   left: 0;
   width: 100%;
   height: 100%;
   background-size: cover;
   background-position: center;
-  background-repeat: no-repeat;
-  z-index: -2; /* Pinakalikod para hindi matakpan ang text */
-  /* Siguradong hindi magbabago ang kulay ng image mo */
+  z-index: -2;
 }
 
-/* 2. OVERLAY (Transparent/Clear Layer) */
 .bg-overlay {
   position: fixed;
   inset: 0;
-  /* GINAWANG TRANSPARENT: Halos walang kulay para litaw ang painting */
-  background: rgba(0, 0, 0, 0.03); 
-  
-  /* TINANGGAL ANG BLUR: Para HD at hindi malabo ang painting */
-  backdrop-filter: none; 
-  -webkit-backdrop-filter: none;
-  
-  z-index: -1; /* Sa pagitan ng image at ng content */
+  background: rgba(255, 255, 255, 0.6); /* Mas malinaw na overlay para sa readability */
+  backdrop-filter: blur(2px);
+  z-index: -1;
 }
 
-/* 3. MAIN CONTENT HOLDER (Center ng Login/Register box) */
-.main-content {
-  position: relative;
-  z-index: 10; /* Pinakaharap */
+/* SYSTEM LAYOUT */
+.system-container {
   display: flex;
-  justify-content: center;
+  height: 100vh;
+  width: 100vw;
+  overflow: hidden;
+}
+
+/* SIDEBAR - DARK THEME */
+.sidebar {
+  width: 280px;
+  background: #0f172a; /* Solid Deep Slate */
+  color: white;
+  display: flex;
+  flex-direction: column;
+  padding: 30px 20px;
+  z-index: 100;
+  box-shadow: 4px 0 20px rgba(0,0,0,0.1);
+}
+
+.sidebar-logo {
+  padding: 10px 15px;
+  margin-bottom: 40px;
+}
+
+.sidebar-logo h1 {
+  font-size: 1.8rem;
+  font-weight: 900;
+  letter-spacing: -1px;
+}
+
+.sidebar-logo span { color: #27ae60; } /* Emerald Green */
+
+.nav-links {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.nav-links a {
+  display: flex;
   align-items: center;
-  min-height: 100vh;
-  padding: 20px; /* Space para sa mobile screens */
+  gap: 15px;
+  color: #94a3b8;
+  text-decoration: none;
+  padding: 14px 20px;
+  border-radius: 14px;
+  font-weight: 600;
+  font-size: 0.95rem;
+  transition: all 0.3s ease;
 }
 
-/* Siguraduhin na ang lahat ng pages sa loob ay naka-center */
-.main-content > div {
-  width: 100%;
+.nav-links a:hover {
+  background: rgba(255, 255, 255, 0.05);
+  color: #fff;
+}
+
+.nav-links a.active {
+  background: #27ae60;
+  color: white;
+  box-shadow: 0 10px 15px -3px rgba(39, 174, 96, 0.3);
+}
+
+.logout-btn {
+  margin-top: auto;
+  background: #fee2e2;
+  color: #ef4444;
+  border: none;
+  padding: 15px;
+  border-radius: 14px;
+  cursor: pointer;
   display: flex;
+  align-items: center;
   justify-content: center;
+  gap: 10px;
+  font-weight: 800;
+  font-size: 0.9rem;
+  transition: 0.2s;
 }
 
-/* =========================================
-   UTILITIES (Optional but Helpful)
-   ========================================= */
-@media (max-width: 480px) {
-  .main-content {
-    padding: 10px;
-  }
+.logout-btn:hover {
+  background: #ef4444;
+  color: white;
 }
 
-/* Animation kung gusto mong gamitin sa ibang parts ng app */
-@keyframes fadeIn {
-  from { opacity: 0; transform: translateY(10px); }
-  to { opacity: 1; transform: translateY(0); }
+/* MAIN CONTENT AREA */
+.main-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
 }
 
-.register-container {
-  animation: fadeIn 0.5s ease-out;
+/* MODERN HEADER - SMART DESIGN */
+.header {
+  height: 90px;
+  background: rgba(255, 255, 255, 0.8);
+  backdrop-filter: blur(15px);
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  padding: 0 40px;
+  border-bottom: 1px solid rgba(226, 232, 240, 0.8);
+}
+
+.user-profile-header {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  background: white;
+  padding: 10px 20px;
+  border-radius: 18px;
+  border: 1px solid #f1f5f9;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+}
+
+.header-avatar-box {
+  background: #f8fafc;
+  width: 50px;
+  height: 50px;
+  border-radius: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid #e2e8f0;
+}
+
+.header-icon {
+  font-size: 1.6rem;
+}
+
+.admin-theme { color: #27ae60; }
+.employee-theme { color: #3b82f6; }
+
+.header-user-details {
+  display: flex;
+  flex-direction: column;
+  text-align: left;
+}
+
+.header-full-name {
+  font-size: 1.1rem;
+  font-weight: 800;
+  color: #0f172a;
+  line-height: 1;
+  margin-bottom: 4px;
+}
+
+.header-meta-info {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.header-role-tag {
+  font-size: 10px;
+  font-weight: 900;
+  padding: 2px 8px;
+  border-radius: 6px;
+  letter-spacing: 0.5px;
+}
+
+.header-role-tag.admin {
+  background: #dcfce7;
+  color: #166534;
+}
+
+.header-role-tag.employee {
+  background: #dbeafe;
+  color: #1e40af;
+}
+
+.header-email-text {
+  font-size: 12px;
+  color: #64748b;
+  font-weight: 500;
+}
+
+/* PAGE DATA SCROLL AREA */
+.page-data {
+  flex: 1;
+  overflow-y: auto;
+  padding: 30px;
+  background: rgba(255, 255, 255, 0.2);
+}
+
+/* CUSTOM SCROLLBAR */
+.page-data::-webkit-scrollbar {
+  width: 6px;
+}
+
+.page-data::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 10px;
 }

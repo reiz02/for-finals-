@@ -4,124 +4,121 @@ import "./EmployeePage.css";
 function EmployeePage() {
   const [employees, setEmployees] = useState([]);
   const [loading, setLoading] = useState(true);
-
   const [dialog, setDialog] = useState({ show: false, employeeId: null });
 
-  // Fetch all employees from backend
-  const fetchEmployees = async () => {
-    setLoading(true);
+  // Fetch employees logic
+  const fetchEmployees = async (isInitialLoad = false) => {
+    // STEADY FIX: I-set lang ang loading kung ito ang unang beses na mag-load
+    if (isInitialLoad) setLoading(true);
+    
     try {
       const res = await fetch("http://localhost:5000/api/employees");
-      if (!res.ok) {
-        console.error("Server error:", res.status);
-        setLoading(false);
-        return;
+      if (res.ok) {
+        const data = await res.json();
+        setEmployees(data);
       }
-      const data = await res.json();
-      setEmployees(data);
     } catch (err) {
       console.error("Failed to load employees", err);
     } finally {
-      setLoading(false);
+      if (isInitialLoad) setLoading(false);
     }
   };
 
   useEffect(() => {
-    fetchEmployees();
-    const interval = setInterval(fetchEmployees, 5000); // auto-refresh every 5s
+    fetchEmployees(true); // Initial load lang ang may loading text
+    const interval = setInterval(() => fetchEmployees(false), 5000); // Silent refresh
     return () => clearInterval(interval);
   }, []);
 
-  // Approve employee
   const approveEmployee = async (id) => {
     try {
-      const res = await fetch(`http://localhost:5000/api/employees/approve/${id}`, {
-        method: "PUT",
-      });
-      if (!res.ok) return console.error("Approve failed");
-      fetchEmployees();
-    } catch (err) {
-      console.error("Approve error:", err);
-    }
+      const res = await fetch(`http://localhost:5000/api/employees/approve/${id}`, { method: "PUT" });
+      if (res.ok) fetchEmployees(false);
+    } catch (err) { console.error(err); }
   };
 
-  // Delete employee
   const deleteEmployee = async (id) => {
     try {
       const res = await fetch(`http://localhost:5000/api/employees/${id}`, { method: "DELETE" });
-      if (!res.ok) return console.error("Delete failed");
-      fetchEmployees();
-    } catch (err) {
-      console.error("Delete error:", err);
-    }
+      if (res.ok) fetchEmployees(false);
+    } catch (err) { console.error(err); }
   };
 
   return (
     <div className="employee-page">
-      <h1>Employee Management</h1>
+      <div className="employee-header">
+        <h1>Employee Management</h1>
+      </div>
 
       <div className="employee-card">
+        {/* VISIBLE THEME: Added Card Accent Header */}
+        <div className="card-accent-header">
+          <span>👥 Registered Employees</span>
+        </div>
+
         {loading ? (
           <p className="status-text">Loading employees...</p>
-        ) : employees.length === 0 ? (
-          <p className="status-text">No employees found.</p>
         ) : (
-          <table className="employee-table">
-            <thead>
-              <tr>
-                <th>Name</th>
-                <th>Email</th>
-                <th>Section</th>
-                <th>Status</th>
-                <th>Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {employees.map((emp) => (
-                <tr key={emp._id}>
-                  <td>{emp.firstName} {emp.lastName}</td>
-                  <td>{emp.email}</td>
-                  <td>{emp.section}</td>
-                  <td>
-                    <span className={`status-badge ${emp.status}`}>{emp.status}</span>
-                  </td>
-                  <td className="actions-cell">
-                    {emp.status === "pending" && (
-                      <button className="approve-btn" onClick={() => approveEmployee(emp._id)}>
-                        Approve
-                      </button>
-                    )}
-                    <button className="delete-btn" onClick={() => setDialog({ show: true, employeeId: emp._id })}>
-                      Delete
-                    </button>
-                  </td>
+          <div className="table-container">
+            <table className="employee-table">
+              <thead>
+                <tr>
+                  <th className="col-name">Name</th>
+                  <th className="col-email">Email Address</th>
+                  <th className="col-section">Section</th>
+                  <th className="col-status">Status</th>
+                  <th className="col-actions">Actions</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {employees.length === 0 ? (
+                  <tr><td colSpan="5" className="status-text">No employees found.</td></tr>
+                ) : (
+                  employees.map((emp) => (
+                    <tr key={emp._id}>
+                      <td className="col-name">{emp.firstName} {emp.lastName}</td>
+                      <td className="col-email">{emp.email}</td>
+                      <td className="col-section">
+                        <span className="section-badge">{emp.section}</span>
+                      </td>
+                      <td className="col-status">
+                        <span className={`status-badge ${emp.status}`}>{emp.status}</span>
+                      </td>
+                      <td className="actions-cell col-actions">
+                        {emp.status === "pending" && (
+                          <button className="approve-btn" onClick={() => approveEmployee(emp._id)}>
+                            Approve
+                          </button>
+                        )}
+                        <button className="delete-btn" onClick={() => setDialog({ show: true, employeeId: emp._id })}>
+                          Delete
+                        </button>
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
         )}
       </div>
 
-      {/* Delete Confirmation Dialog */}
       {dialog.show && (
         <div className="dialog-overlay">
           <div className="dialog-box">
             <h3>Confirm Delete</h3>
-            <p>Are you sure you want to delete this employee?</p>
-            <div style={{ display: "flex", gap: "10px", marginTop: "20px" }}>
+            <p>Are you sure you want to delete this employee? This action cannot be undone.</p>
+            <div className="dialog-btn-container">
               <button
+                className="confirm-btn"
                 onClick={() => {
                   deleteEmployee(dialog.employeeId);
                   setDialog({ show: false, employeeId: null });
                 }}
-                style={{ flex: 1, backgroundColor: "#e74c3c", color: "#fff", border: "none", padding: "8px", borderRadius: "6px" }}
               >
                 Yes, Delete
               </button>
-              <button
-                onClick={() => setDialog({ show: false, employeeId: null })}
-                style={{ flex: 1, backgroundColor: "#7f8c8d", color: "#fff", border: "none", padding: "8px", borderRadius: "6px" }}
-              >
+              <button className="cancel-btn" onClick={() => setDialog({ show: false, employeeId: null })}>
                 Cancel
               </button>
             </div>

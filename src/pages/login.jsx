@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import "./register.css";
+import "./register.css"; 
 
 function Login() {
   const [email, setEmail] = useState("");
@@ -20,6 +20,7 @@ function Login() {
       setDialog({ show: true, message: "Please fill all required fields.", type: "error" });
       return;
     }
+
     setLoading(true);
     try {
       const response = await fetch("http://localhost:5000/api/login", {
@@ -30,17 +31,45 @@ function Login() {
           password
         })
       });
+
       const data = await response.json();
+
       if (response.ok) {
+        // 1. I-save ang user info sa localStorage
         localStorage.setItem("user", JSON.stringify(data.user));
         localStorage.setItem("isLoggedIn", "true");
+
         setDialog({ show: true, message: "Login successful!", type: "success" });
-        setTimeout(() => { navigate("/dashboard"); }, 1200);
+
+        // 2. DYNAMIC ROLE & SECTION NAVIGATION
+        setTimeout(() => {
+          const userRole = data.user.role?.toLowerCase();
+          const userSection = data.user.section?.toLowerCase();
+
+          if (userRole === "admin") {
+            navigate("/dashboard");
+          } else if (userRole === "employee") {
+            // Check section for Employee
+            if (userSection === "finance") {
+              navigate("/reports");
+            } else if (userSection === "inventory") {
+              navigate("/stock");
+            } else {
+              // Fallback kung approved pero walang section
+              navigate("/login");
+              setDialog({ show: true, message: "Section not assigned. Contact Admin.", type: "error" });
+            }
+          } else {
+            navigate("/login");
+          }
+        }, 1200);
+
       } else {
         setDialog({ show: true, message: data.error || "Login failed", type: "error" });
       }
     } catch (err) {
-      setDialog({ show: true, message: "Server connection error.", type: "error" });
+      setDialog({ show: true, message: "Server connection error. Is the backend running?", type: "error" });
+      console.error("Login Error:", err);
     } finally {
       setLoading(false);
     }
@@ -48,7 +77,7 @@ function Login() {
 
   return (
     <div className="login-page-wrapper">
-      <div className="login-container"> {/* Gamit ang .login-container class mo */}
+      <div className="login-container">
         
         {/* Header Section */}
         <div className="login-header">
@@ -68,6 +97,7 @@ function Login() {
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               required
+              autoComplete="email"
             />
           </div>
 
@@ -82,30 +112,39 @@ function Login() {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
+                autoComplete="current-password"
               />
             </div>
           </div>
 
-          {/* Forgot Password */}
+          {/* Forgot Password Link */}
           <div className="footer-links" style={{ textAlign: "right", marginTop: "0", animationDelay: "0.3s" }}>
-            <Link to="/forgot-password" title="Reset your password" style={{ color: "#438a5e", textDecoration: "none", fontSize: "12px", fontWeight: "600" }}>
+            <Link 
+              to="/forgot-password" 
+              style={{ color: "#438a5e", textDecoration: "none", fontSize: "12px", fontWeight: "600" }}
+            >
               Forgot password?
             </Link>
           </div>
 
           {/* Submit Button */}
-          <button type="submit" className="login-btn" disabled={loading} style={{ animationDelay: "0.4s" }}>
+          <button 
+            type="submit" 
+            className="login-btn" 
+            disabled={loading} 
+            style={{ animationDelay: "0.4s" }}
+          >
             {loading ? "Logging in..." : "Login"}
           </button>
         </form>
 
-        {/* Footer */}
+        {/* Register Footer */}
         <p className="footer-text" style={{ animationDelay: "0.5s" }}>
           Don't have an account? 
           <Link to="/register" className="register-link"> Register here</Link>
         </p>
 
-        {/* Dialog Box (Modal) */}
+        {/* Dialog Modal for Success/Error */}
         {dialog.show && (
           <div className="dialog-overlay">
             <div className="dialog-box">
@@ -113,7 +152,11 @@ function Login() {
                 {dialog.type === "error" ? "Error" : "Success"}
               </h3>
               <p style={{ fontSize: "14px", color: "#4b5563", marginBottom: "20px" }}>{dialog.message}</p>
-              <button onClick={closeDialog} className="login-btn" style={{ marginTop: "0", opacity: 1, transform: "none", animation: "none" }}>
+              <button 
+                onClick={closeDialog} 
+                className="login-btn" 
+                style={{ marginTop: "0", opacity: 1, transform: "none", animation: "none" }}
+              >
                 Close
               </button>
             </div>

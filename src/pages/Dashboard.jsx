@@ -1,324 +1,149 @@
 import React, { useEffect, useState, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
-import {
-  FaUser, FaSignOutAlt, FaBox, FaUsers,
-  FaChartLine, FaTrash, FaCalendarAlt, FaExclamationTriangle
-} from "react-icons/fa";
-
-import StockPage from "./StockPage";
-import EmployeePage from "./EmployeePage";
-import EmployeeEarnings from "./EmployeeEarnings";
+import { FaCalendarAlt, FaExclamationTriangle } from "react-icons/fa";
 import DailyEarnings from "./DailyEarnings";
-import TotalEarningsCard from "./TotalEarningsCard";
-import ReportsPage from "./ReportsPage";
 
 function Dashboard() {
   const navigate = useNavigate();
   const user = JSON.parse(localStorage.getItem("user"));
   const isLoggedIn = localStorage.getItem("isLoggedIn");
-  const role = user?.role;
-  const section = user?.section;
 
-  const [page, setPage] = useState("dashboard");
-  const [interval, setIntervalTime] = useState(new Date());
-  const [earnings, setEarnings] = useState("");
-
+  const [currentTime, setCurrentTime] = useState(new Date());
   const [reportData, setReportData] = useState({
     dailyEarnings: 0,
+    totalGrossIncome: 0,
     dailyHistory: []
   });
-  const [submissions, setSubmissions] = useState([]);
+
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [selectedId, setSelectedId] = useState(null);
 
-  const [showValidationDialog, setShowValidationDialog] = useState(false);
-  const [reportDate, setReportDate] = useState(new Date().toISOString().split("T")[0]); 
-  const [showDateValidationDialog, setShowDateValidationDialog] = useState(false);
-
-  // Fetch report and earnings data
+  // FETCH DATA FROM SERVER
   const fetchData = useCallback(async () => {
     try {
       const historyRes = await fetch("http://localhost:5000/api/earnings");
       const historyJson = await historyRes.json();
-
       const todayStr = new Date().toLocaleDateString("en-US");
 
-      // Calculate Today's Net Earnings (Income - Expense)
+      // Daily Net Earnings (Income minus Expense)
       const todayNet = historyJson
         .filter(item => new Date(item.date).toLocaleDateString("en-US") === todayStr)
         .reduce((sum, item) => {
           return item.type === "Expense" ? sum - item.amount : sum + item.amount;
         }, 0);
 
+      // Total Gross (All Incomes only)
+      const totalGross = historyJson
+        .filter(item => item.type !== "Expense")
+        .reduce((sum, item) => sum + item.amount, 0);
+
       setReportData({
         dailyEarnings: todayNet, 
+        totalGrossIncome: totalGross,
         dailyHistory: historyJson 
       });
-
-      setSubmissions(historyJson);
     } catch (err) {
       console.error("Data fetch error:", err);
     }
   }, []);
 
-  // Initial login check and data fetch
   useEffect(() => {
-    if (isLoggedIn !== "true" || !user) navigate("/");
-    else fetchData();
+    if (isLoggedIn !== "true" || !user) {
+      navigate("/login");
+    } else {
+      fetchData();
+    }
   }, [isLoggedIn, navigate, user, fetchData]);
 
-  // Timer
+  // Real-time Clock
   useEffect(() => {
-    const clock = setInterval(() => {
-      setIntervalTime(new Date());
-    }, 1000);
-
+    const clock = setInterval(() => setCurrentTime(new Date()), 1000);
     return () => clearInterval(clock);
   }, []);
 
-  if (!user || isLoggedIn !== "true") return null;
-
-  const handleLogout = () => {
-    localStorage.clear();
-    navigate("/");
-  };
-
-  // Submit daily earnings
-  const submitEarnings = async () => {
-    if (!earnings || isNaN(Number(earnings))) {
-      setShowValidationDialog(true);
-      return;
-    }
-
-    const today = new Date();
-    const yesterday = new Date();
-    yesterday.setDate(today.getDate() - 1);
-
-    const formattedToday = today.toISOString().split("T")[0];
-    const formattedYesterday = yesterday.toISOString().split("T")[0];
-
-    if (reportDate !== formattedToday && reportDate !== formattedYesterday) {
-      setShowDateValidationDialog(true); 
-      return;
-    }
-
-    try {
-      const response = await fetch("http://localhost:5000/api/earnings", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ 
-          employeeEmail: user.email, 
-          amount: Number(earnings),
-          date: reportDate
-        })
-      });
-
-      if (response.ok) {
-        setEarnings("");
-        await fetchData();
-        setPage("reports");
-      }
-    } catch (err) {
-      console.error("Submit error:", err);
-    }
-  };
-
-  const openDeleteDialog = (id) => {
-    setSelectedId(id);
-    setShowDeleteModal(true);
-  };
-
-  const confirmDelete = async () => {
-    try {
-      const response = await fetch(`http://localhost:5000/api/earnings/${selectedId}`, { method: "DELETE" });
-      if (response.ok) {
-        setShowDeleteModal(false);
-        setSelectedId(null);
-        await fetchData();
-      }
-    } catch (err) {
-      console.error("Delete error:", err);
-    }
-  };
-
-  const startEdit = (id) => {
-    setSubmissions(submissions.map(s =>
-      s._id === id ? { ...s, isEditing: true, editAmount: s.amount } : s
-    ));
-  };
-
-  const cancelEdit = (id) => {
-    setSubmissions(submissions.map(s =>
-      s._id === id ? { ...s, isEditing: false } : s
-    ));
-  };
-
-  const saveEdit = async (id, editAmount) => {
-    try {
-      const response = await fetch(`http://localhost:5000/api/earnings/${id}`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ amount: Number(editAmount) })
-      });
-      if (response.ok) {
-        setSubmissions(submissions.map(s =>
-          s._id === id ? { ...s, amount: Number(editAmount), isEditing: false } : s
-        ));
-        await fetchData();
-      }
-    } catch (err) {
-      console.error("Update error:", err);
-    }
-  };
+  const activeMint = "#57bc90"; 
+  const softShadow = "0 4px 20px rgba(0, 0, 0, 0.05)";
 
   return (
-    <div style={{ display: "flex", height: "100vh", width: "100vw", overflow: "hidden", fontFamily: "sans-serif" }}>
+    <div style={{ width: "100%", padding: "25px", backgroundColor: "#fdfdfd", minHeight: "100vh" }}>
       
-      {/* Sidebar - Fix: Width reduced and flex-shrink added */}
-      <aside style={{ 
-        width: "220px", 
-        backgroundColor: "#1f2933", 
-        color: "#fff", 
-        padding: "30px 20px", 
-        display: "flex", 
-        flexDirection: "column",
-        flexShrink: 0 
+      {/* 1. MINIMALIST PAGE STATUS BAR (Inalis ang duplicate profile) */}
+      <div style={{ 
+        display: "flex", justifyContent: "space-between", alignItems: "center", 
+        marginBottom: "30px", backgroundColor: "#fff", padding: "12px 25px",
+        borderRadius: "12px", boxShadow: softShadow, border: "1px solid #f0f4f8"
       }}>
-        <h2 style={{ marginBottom: "30px", fontSize: "16px" }}>Farm Ops</h2>
-        <nav style={{ display: "flex", flexDirection: "column", gap: "20px", flex: 1 }}>
-          <div onClick={() => setPage("dashboard")} style={{ display: "flex", alignItems: "center", gap: "10px", cursor: "pointer", color: page === "dashboard"? "#4e73df" : "#fff" }}>
-            <FaUser /> Dashboard
-          </div>
-          {role === "admin" && (
-            <div onClick={() => setPage("employees")} style={{ display: "flex", alignItems: "center", gap: "10px", cursor: "pointer", color: page === "employees"? "#4e73df" : "#fff" }}>
-              <FaUsers /> Employees
-            </div>
-          )}
-          {(section === "Inventory" || role === "admin") && (
-            <div onClick={() => setPage("stock")} style={{ display: "flex", alignItems: "center", gap: "10px", cursor: "pointer", color: page === "stock"? "#4e73df" : "#fff" }}>
-              <FaBox /> Inventory
-            </div>
-          )}
-          <div 
-            onClick={() => setPage("reports")} 
-            style={{ 
-              display: "flex", 
-              alignItems: "center", 
-              gap: "10px", 
-              cursor: "pointer", 
-              color: page === "reports" ? "#4e73df" : "#fff" 
-            }}
-          >
-            <FaChartLine /> Reports
-          </div>
-          <div onClick={handleLogout} style={{ cursor: "pointer", marginTop: "auto", color: "#ff6b6b", display: "flex", alignItems: "center", gap: "10px" }}>
-            <FaSignOutAlt /> Logout
-          </div>
-        </nav>
-      </aside>
-
-      {/* Main Content Area */}
-      <main style={{ flex: 1, backgroundColor: "#f4f6f8", overflowY: "auto", position: "relative" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: "10px", color: "#64748b", fontWeight: "500", fontSize: "14px" }}>
+          <FaCalendarAlt style={{ color: activeMint }} /> 
+          {currentTime.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })} 
+          <span style={{ color: "#cbd5e1", margin: "0 8px" }}>|</span>
+          <span style={{ color: "#1e293b", fontWeight: "bold" }}>{currentTime.toLocaleTimeString()}</span>
+        </div>
         
-        {/* Header - Fix: Reduced horizontal padding */}
-        <header style={{ padding: "15px 25px", display: "flex", justifyContent: "space-between", alignItems: "center", backgroundColor: "#fff", borderBottom: "1px solid #e3e6f0" }}>
-          <div style={{ fontSize: "16px", color: "#333", fontWeight: "bold" }}>
-            Welcome back, {user.firstName || "User"} 
-            <span style={{ fontSize: "12px", color: "#888", marginLeft: "10px", textTransform: "uppercase" }}>
-              ({role})
-            </span>
-          </div>
-          <div style={{ display: "flex", alignItems: "center", gap: "10px", color: "#666", fontSize: "14px" }}>
-            <FaCalendarAlt /> {interval.toLocaleDateString()} - {interval.toLocaleTimeString()}
-          </div>
-        </header>
+        <div style={{ fontSize: "13px", color: "#94a3b8", fontWeight: "500" }}>
+          System Node: <span style={{ color: activeMint }}>Active</span>
+        </div>
+      </div>
 
-        {/* Dashboard cards and charts */}
-        {page === "dashboard" && (
-          <div style={{ padding: "20px" }}>
-            
-            {/* Top Cards - Fix: Flex Wrap for responsiveness */}
-            <div style={{ display: "flex", gap: "20px", flexWrap: "wrap", marginBottom: "20px" }}>
-              <div style={{ flex: "1 1 250px", background: "#4e73df", color: "#fff", padding: "25px", borderRadius: "10px" }}>
-                <div style={{ fontSize: "12px", fontWeight: "bold" }}>DAILY EARNINGS</div>
-                <div style={{ fontSize: "28px", fontWeight: "bold" }}>
-                  ₱{reportData.dailyEarnings.toLocaleString()}
-                </div>
-              </div>
-              
-              {/* Ensure TotalEarningsCard also supports flex sizing */}
-              <div style={{ flex: "1 1 250px" }}>
-                <TotalEarningsCard />
-              </div>
-            </div>
-            
-            {/* Chart Area - Fix: overflow hidden and flex sizing */}
-            <div style={{ display: "flex", gap: "20px", flexWrap: "wrap" }}>
-              <div
-                style={{
-                  flex: 1,
-                  background: "#fff",
-                  padding: "20px",
-                  borderRadius: "10px",
-                  minWidth: "0", // CRITICAL for chart resizing
-                  boxShadow: "0 4px 6px rgba(0,0,0,0.1)",
-                  overflow: "hidden"
-                }}
-              >
-                <DailyEarnings data={reportData.dailyHistory || []} />
-              </div>
-            </div>
+      {/* 2. ANALYTICS CARDS (Emerald Theme) */}
+      <div style={{ display: "flex", gap: "25px", marginBottom: "30px" }}>
+        {/* Daily Net Card */}
+        <div style={{ 
+          flex: 1, backgroundColor: "#fff", padding: "30px", borderRadius: "20px", 
+          boxShadow: softShadow, borderBottom: `4px solid ${activeMint}`,
+          background: "linear-gradient(to bottom right, #ffffff, #f9fffb)"
+        }}>
+          <div style={{ fontSize: "12px", fontWeight: "800", color: "#94a3b8", letterSpacing: "1px", marginBottom: "10px" }}>DAILY NET EARNINGS</div>
+          <div style={{ fontSize: "42px", fontWeight: "900", color: "#1e293b" }}>₱{reportData.dailyEarnings.toLocaleString()}</div>
+        </div>
 
-          </div>
-        )}
+        {/* Total Gross Card */}
+        <div style={{ 
+          flex: 1, backgroundColor: "#fff", padding: "30px", borderRadius: "20px", 
+          boxShadow: softShadow, borderBottom: `4px solid #3b82f6`,
+          background: "linear-gradient(to bottom right, #ffffff, #f8faff)"
+        }}>
+          <div style={{ fontSize: "12px", fontWeight: "800", color: "#94a3b8", letterSpacing: "1px", marginBottom: "10px" }}>TOTAL GROSS INCOME</div>
+          <div style={{ fontSize: "42px", fontWeight: "900", color: "#1e293b" }}>₱{reportData.totalGrossIncome.toLocaleString()}</div>
+        </div>
+      </div>
 
-        {/* Conditional Page Rendering */}
-        {page === "employees" && role === "admin" && <EmployeePage />}
-        {page === "stock" && (section === "Inventory" || role === "admin") && <StockPage />}
-        {page === "reports" && <ReportsPage />}
-
-        {/* Modals */}
-        {showDeleteModal && (
-          <div style={{ position: "fixed", top: 0, left: 0, width: "100%", height: "100%", backgroundColor: "rgba(0,0,0,0.5)", display: "flex", justifyContent: "center", alignItems: "center", zIndex: 1000 }}>
-            <div style={{ background: "white", padding: "30px", borderRadius: "10px", width: "400px", textAlign: "center", boxShadow: "0 10px 25px rgba(0,0,0,0.2)" }}>
-              <FaExclamationTriangle style={{ fontSize: "40px", color: "#f6c23e", marginBottom: "15px" }} />
-              <h3>Confirm Deletion</h3>
-              <p style={{ color: "#666" }}>This will remove the record. This action cannot be undone.</p>
-              <div style={{ display: "flex", gap: "10px", justifyContent: "center", marginTop: "20px" }}>
-                <button onClick={() => setShowDeleteModal(false)} style={{ padding: "10px 20px", borderRadius: "5px", border: "1px solid #ddd", cursor: "pointer" }}>Cancel</button>
-                <button onClick={confirmDelete} style={{ padding: "10px 20px", borderRadius: "5px", border: "none", background: "#ff6b6b", color: "white", cursor: "pointer" }}>Delete</button>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {showValidationDialog && (
-          <div style={{ position: "fixed", top: 0, left: 0, width: "100%", height: "100%", backgroundColor: "rgba(0,0,0,0.5)", display: "flex", justifyContent: "center", alignItems: "center", zIndex: 1000 }}>
-            <div style={{ background: "white", padding: "30px", borderRadius: "10px", width: "400px", textAlign: "center", boxShadow: "0 10px 25px rgba(0,0,0,0.2)" }}>
-              <FaExclamationTriangle style={{ fontSize: "40px", color: "#f6c23e", marginBottom: "15px" }} />
-              <h3>Validation Error</h3>
-              <p style={{ color: "#666" }}>Please enter a value for daily income.</p>
-              <div style={{ display: "flex", gap: "10px", justifyContent: "center", marginTop: "20px" }}>
-                <button onClick={() => setShowValidationDialog(false)} style={{ padding: "10px 20px", borderRadius: "5px", border: "1px solid #ddd", cursor: "pointer" }}>OK</button>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {showDateValidationDialog && (
-          <div style={{ position: "fixed", top: 0, left: 0, width: "100%", height: "100%", backgroundColor: "rgba(0,0,0,0.5)", display: "flex", justifyContent: "center", alignItems: "center", zIndex: 1000 }}>
-            <div style={{ background: "white", padding: "30px", borderRadius: "10px", width: "400px", textAlign: "center", boxShadow: "0 10px 25px rgba(0,0,0,0.2)" }}>
-              <FaExclamationTriangle style={{ fontSize: "40px", color: "#f6c23e", marginBottom: "15px" }} />
-              <h3>Date Validation Error</h3>
-              <p style={{ color: "#666" }}>You can only submit a report for today or yesterday.</p>
-              <div style={{ display: "flex", gap: "10px", justifyContent: "center", marginTop: "20px" }}>
-                <button onClick={() => setShowDateValidationDialog(false)} style={{ padding: "10px 20px", borderRadius: "5px", border: "1px solid #ddd", cursor: "pointer" }}>OK</button>
-              </div>
-            </div>
-          </div>
-        )}
+      {/* 3. CHART CONTAINER (Interactive Analytics) */}
+      <div style={{ 
+        backgroundColor: "#fff", padding: "35px", borderRadius: "24px", 
+        boxShadow: softShadow, border: "1px solid #f1f5f9" 
+      }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "25px" }}>
+          <h3 style={{ color: "#1e293b", fontWeight: "800", fontSize: "20px", margin: 0 }}>Earnings Analytics</h3>
+          <span style={{ fontSize: "12px", padding: "5px 12px", backgroundColor: "#f1f5f9", borderRadius: "20px", color: "#64748b" }}>Real-time Sync</span>
+        </div>
         
-      </main>
+        <div style={{ width: "100%", height: "350px", display: "flex", alignItems: "center", justifyContent: "center" }}>
+           <DailyEarnings data={reportData.dailyHistory || []} />
+        </div>
+      </div>
+
+      {/* 4. DELETE MODAL */}
+      {showDeleteModal && (
+        <div style={{ 
+          position: "fixed", top: 0, left: 0, width: "100%", height: "100%", 
+          backgroundColor: "rgba(15, 23, 42, 0.6)", display: "flex", 
+          justifyContent: "center", alignItems: "center", zIndex: 9999, 
+          backdropFilter: "blur(8px)" 
+        }}>
+          <div style={{ background: "white", padding: "40px", borderRadius: "24px", width: "400px", textAlign: "center", boxShadow: "0 25px 50px -12px rgba(0, 0, 0, 0.5)" }}>
+            <FaExclamationTriangle style={{ fontSize: "50px", color: "#ef4444", marginBottom: "20px" }} />
+            <h3 style={{ fontSize: "22px", fontWeight: "900", color: "#1e293b", marginBottom: "10px" }}>Confirm Deletion</h3>
+            <p style={{ color: "#64748b", fontSize: "15px", marginBottom: "30px", lineHeight: "1.5" }}>
+              Are you sure you want to remove this record? This action will permanently affect your financial history.
+            </p>
+            <div style={{ display: "flex", gap: "15px" }}>
+              <button onClick={() => setShowDeleteModal(false)} style={{ flex: 1, padding: "14px", borderRadius: "12px", border: "1px solid #e2e8f0", backgroundColor: "#fff", cursor: "pointer", fontWeight: "600" }}>Cancel</button>
+              <button onClick={() => {/* confirmDelete logic here */}} style={{ flex: 1, padding: "14px", borderRadius: "12px", border: "none", backgroundColor: "#ef4444", color: "white", cursor: "pointer", fontWeight: "600" }}>Delete Record</button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
