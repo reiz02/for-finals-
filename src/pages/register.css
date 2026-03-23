@@ -1,0 +1,297 @@
+/* =========================================
+   1. PAGE WRAPPER
+   ========================================= */
+.login-page-wrapper {
+  background: transparent !important;
+  min-height: 100vh;
+  width: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 20px;
+  position: relative;
+  z-index: 10;
+}
+
+/* =========================================
+   2. MODERN GLASS CARD
+   ========================================= */
+.register-container, 
+.login-container {
+  /* Whiter glass background para sa readability */
+  background: rgba(255, 255, 255, 0.95) !important;
+  backdrop-filter: blur(15px);
+  -webkit-backdrop-filter: blur(15px);
+  
+  width: 100%;
+  max-width: 500px; 
+  padding: 40px;
+  border-radius: 28px; 
+  
+  /* Mas madilim na border para makita ang hugis ng card */
+  border: 1px solid rgba(0, 0, 0, 0.1);
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.15);
+  
+  text-align: center;
+  position: relative;
+  
+  /* Scroll handling */
+  max-height: 92vh;
+  overflow-y: auto;
+  
+  /* Animation */
+  opacity: 1;
+  transform: translateY(0);
+  animation: cardEntrance 0.6s ease-out;
+}
+
+/* Custom Scrollbar */
+.register-container::-webkit-scrollbar {
+  width: 6px;
+}
+.register-container::-webkit-scrollbar-thumb {
+  background: rgba(67, 138, 94, 0.5);
+  border-radius: 10px;
+}
+
+/* =========================================
+   3. LOGO & HEADERS
+   ========================================= */
+.login-header {
+  margin-bottom: 30px;
+}
+
+.brand-logo {
+  font-size: 40px;
+  font-weight: 800;
+  color: #2d5a3e !important; /* Mas madilim na FarmOps Green */
+  letter-spacing: -1.5px;
+  margin: 0;
+}
+
+.brand-logo span {
+  color: #000000 !important; /* Solid Black */
+}
+
+.login-header h2 {
+  font-size: 26px;
+  font-weight: 800;
+  color: #000000 !important; /* Solid Black */
+  margin-top: 10px;
+}
+
+.subtitle {
+  font-size: 15px;
+  color: #374151 !important; /* Dark Grey */
+  font-weight: 500;
+  margin-top: 5px;
+}
+
+/* =========================================
+   4. FORM LAYOUT & INPUTS (HIGH VISIBILITY)
+   ========================================= */
+.input-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 15px;
+  margin-bottom: 5px;
+}
+
+.input-group {
+  text-align: left;
+  margin-bottom: 20px;
+  width: 100%;
+}
+
+.input-group label {
+  display: block;
+  font-size: 14px;
+  font-weight: 700; /* Bold para kitang-kita */
+  color: #111827 !important; /* Solid Black Label */
+  margin-bottom: 8px;
+  margin-left: 2px;
+}
+
+.input-group input,
+.input-group select {
+  width: 100%;
+  height: 52px;
+  padding: 12px 16px;
+  font-size: 15px;
+  
+  /* Border: Mas makapal at mas madilim */
+  border: 1.5px solid #9ca3af !important; 
+  
+  /* Fix: Solid White Background at Black Text */
+  background-color: #ffffff !important; 
+  color: #000000 !important; 
+  
+  border-radius: 12px;
+  transition: all 0.2s ease;
+  outline: none;
+}
+
+/* Placeholder visibility */
+.input-group input::placeholder {
+  color: #6b7280 !important; /* Mas madilim na placeholder text */
+  opacity: 1;
+}
+
+/* Para sa Select Option text */
+.input-group select option {
+  color: #000000;
+  background: #ffffff;
+}
+
+/* Input Focus States */
+.input-group input:focus,
+.input-group select:focus {
+  border-color: #2d5a3e !important;
+  background-color: #ffffff !important;
+  box-shadow: 0 0 0 4px rgba(67, 138, 94, 0.15);
+}
+
+/* =========================================
+   5. PASSWORD FIELD & EYE ICON
+   ========================================= */
+.password-field-container {
+  position: relative;
+  width: 100%;
+}
+
+.eye-icon-trigger {
+  position: absolute;
+  right: 15px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: none;
+  border: none;
+  color: #374151 !important; /* Mas kitang eye icon */
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  z-index: 5;
+  font-size: 18px;
+}
+
+.eye-icon-trigger:hover {
+  color: #2d5a3e !important;
+}
+
+/* =========================================
+   6. PREMIUM BUTTONS
+   ========================================= */
+.login-btn {
+  width: 100%;
+  padding: 16px;
+  background: #1d3a2a !important; /* Very Dark Green */
+  color: #ffffff !important;
+  border: none;
+  border-radius: 12px;
+  font-size: 17px;
+  font-weight: 700;
+  cursor: pointer;
+  margin-top: 15px;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+}
+
+.login-btn:hover {
+  background: #11261b !important;
+  transform: translateY(-2px);
+  box-shadow: 0 6px 15px rgba(0, 0, 0, 0.25);
+}
+
+.login-btn:active {
+  transform: translateY(0);
+}
+
+/* =========================================
+   7. FOOTER & LINKS
+   ========================================= */
+.footer-text {
+  margin-top: 25px;
+  font-size: 14px;
+  color: #1f2937 !important; /* Darker Footer Text */
+  font-weight: 500;
+}
+
+.register-link {
+  color: #2d5a3e !important;
+  text-decoration: none;
+  font-weight: 800;
+  margin-left: 5px;
+}
+
+.register-link:hover {
+  text-decoration: underline;
+}
+
+/* =========================================
+   8. OTP / DIALOG MODAL
+   ========================================= */
+.dialog-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.6); /* Mas madilim na overlay */
+  backdrop-filter: blur(8px);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 9999;
+}
+
+.dialog-box {
+  background: #ffffff;
+  padding: 40px;
+  border-radius: 24px;
+  width: 90%;
+  max-width: 400px;
+  text-align: center;
+  box-shadow: 0 25px 50px rgba(0, 0, 0, 0.3);
+}
+
+.otp-input-field {
+  width: 100%;
+  height: 60px;
+  font-size: 32px;
+  letter-spacing: 10px;
+  font-weight: 800;
+  text-align: center;
+  border: 2px solid #9ca3af !important;
+  border-radius: 12px;
+  margin: 20px 0;
+  background: #f3f4f6 !important;
+  color: #000000 !important;
+}
+
+/* =========================================
+   9. ANIMATIONS
+   ========================================= */
+@keyframes cardEntrance {
+  from {
+    opacity: 0;
+    transform: translateY(30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* =========================================
+   10. MOBILE RESPONSIVENESS
+   ========================================= */
+@media (max-width: 600px) {
+  .input-row {
+    grid-template-columns: 1fr;
+    gap: 0;
+  }
+  .register-container {
+    padding: 30px 20px;
+    max-height: 95vh;
+  }
+  .brand-logo {
+    font-size: 32px;
+  }
+}
