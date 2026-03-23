@@ -10,36 +10,39 @@ function Dashboard() {
 
   const [currentTime, setCurrentTime] = useState(new Date());
   const [reportData, setReportData] = useState({
-    dailyEarnings: 0,
-    totalGrossIncome: 0,
+    dailyEarnings: 0, // Kabuuang Income ngayong araw
+    totalIncome: 0,   // Overall Gross Income (Lahat ng Income entries)
     dailyHistory: []
   });
 
   const [showDeleteModal, setShowDeleteModal] = useState(false);
-  const [selectedId, setSelectedId] = useState(null);
 
-  // FETCH DATA FROM SERVER
+  // FETCH DATA AND CALCULATE
   const fetchData = useCallback(async () => {
     try {
       const historyRes = await fetch("http://localhost:5000/api/earnings");
+      if (!historyRes.ok) throw new Error("Failed to fetch data");
       const historyJson = await historyRes.json();
-      const todayStr = new Date().toLocaleDateString("en-US");
+      
+      // Kunin ang petsa ngayon sa format na YYYY-MM-DD para sa accurate filtering
+      const todayStr = new Date().toISOString().split('T')[0]; 
 
-      // Daily Net Earnings (Income minus Expense)
-      const todayNet = historyJson
-        .filter(item => new Date(item.date).toLocaleDateString("en-US") === todayStr)
-        .reduce((sum, item) => {
-          return item.type === "Expense" ? sum - item.amount : sum + item.amount;
-        }, 0);
+      // 1. DAILY EARNINGS (Lahat ng "Income" entries na ang petsa ay NGAYON)
+      const todayIncome = historyJson
+        .filter(item => {
+          const itemDate = new Date(item.date).toISOString().split('T')[0];
+          return itemDate === todayStr && item.type === "Income";
+        })
+        .reduce((sum, item) => sum + (Number(item.amount) || 0), 0);
 
-      // Total Gross (All Incomes only)
-      const totalGross = historyJson
-        .filter(item => item.type !== "Expense")
-        .reduce((sum, item) => sum + item.amount, 0);
+      // 2. TOTAL GROSS / INCOME (Lahat ng "Income" entries sa buong record)
+      const overallGross = historyJson
+        .filter(item => item.type === "Income")
+        .reduce((sum, item) => sum + (Number(item.amount) || 0), 0);
 
       setReportData({
-        dailyEarnings: todayNet, 
-        totalGrossIncome: totalGross,
+        dailyEarnings: todayIncome, 
+        totalIncome: overallGross,
         dailyHistory: historyJson 
       });
     } catch (err) {
@@ -55,7 +58,7 @@ function Dashboard() {
     }
   }, [isLoggedIn, navigate, user, fetchData]);
 
-  // Real-time Clock
+  // Real-time Clock logic
   useEffect(() => {
     const clock = setInterval(() => setCurrentTime(new Date()), 1000);
     return () => clearInterval(clock);
@@ -67,7 +70,7 @@ function Dashboard() {
   return (
     <div style={{ width: "100%", padding: "25px", backgroundColor: "#fdfdfd", minHeight: "100vh" }}>
       
-      {/* 1. MINIMALIST PAGE STATUS BAR (Inalis ang duplicate profile) */}
+      {/* 1. STATUS BAR */}
       <div style={{ 
         display: "flex", justifyContent: "space-between", alignItems: "center", 
         marginBottom: "30px", backgroundColor: "#fff", padding: "12px 25px",
@@ -85,30 +88,31 @@ function Dashboard() {
         </div>
       </div>
 
-      {/* 2. ANALYTICS CARDS (Emerald Theme) */}
+      {/* 2. ANALYTICS CARDS */}
       <div style={{ display: "flex", gap: "25px", marginBottom: "30px" }}>
-        {/* Daily Net Card */}
+        
+        {/* Daily Earnings Card */}
         <div style={{ 
           flex: 1, backgroundColor: "#fff", padding: "30px", borderRadius: "20px", 
           boxShadow: softShadow, borderBottom: `4px solid ${activeMint}`,
           background: "linear-gradient(to bottom right, #ffffff, #f9fffb)"
         }}>
-          <div style={{ fontSize: "12px", fontWeight: "800", color: "#94a3b8", letterSpacing: "1px", marginBottom: "10px" }}>DAILY NET EARNINGS</div>
+          <div style={{ fontSize: "12px", fontWeight: "800", color: "#94a3b8", letterSpacing: "1px", marginBottom: "10px" }}>DAILY EARNINGS</div>
           <div style={{ fontSize: "42px", fontWeight: "900", color: "#1e293b" }}>₱{reportData.dailyEarnings.toLocaleString()}</div>
         </div>
 
-        {/* Total Gross Card */}
+        {/* Total Gross / Total Income Card */}
         <div style={{ 
           flex: 1, backgroundColor: "#fff", padding: "30px", borderRadius: "20px", 
           boxShadow: softShadow, borderBottom: `4px solid #3b82f6`,
           background: "linear-gradient(to bottom right, #ffffff, #f8faff)"
         }}>
-          <div style={{ fontSize: "12px", fontWeight: "800", color: "#94a3b8", letterSpacing: "1px", marginBottom: "10px" }}>TOTAL GROSS INCOME</div>
-          <div style={{ fontSize: "42px", fontWeight: "900", color: "#1e293b" }}>₱{reportData.totalGrossIncome.toLocaleString()}</div>
+          <div style={{ fontSize: "12px", fontWeight: "800", color: "#94a3b8", letterSpacing: "1px", marginBottom: "10px" }}>TOTAL GROSS / INCOME</div>
+          <div style={{ fontSize: "42px", fontWeight: "900", color: "#1e293b" }}>₱{reportData.totalIncome.toLocaleString()}</div>
         </div>
       </div>
 
-      {/* 3. CHART CONTAINER (Interactive Analytics) */}
+      {/* 3. CHART CONTAINER */}
       <div style={{ 
         backgroundColor: "#fff", padding: "35px", borderRadius: "24px", 
         boxShadow: softShadow, border: "1px solid #f1f5f9" 
@@ -119,6 +123,7 @@ function Dashboard() {
         </div>
         
         <div style={{ width: "100%", height: "350px", display: "flex", alignItems: "center", justifyContent: "center" }}>
+           {/* Sinisiguradong may data bago i-render ang chart */}
            <DailyEarnings data={reportData.dailyHistory || []} />
         </div>
       </div>
@@ -139,7 +144,7 @@ function Dashboard() {
             </p>
             <div style={{ display: "flex", gap: "15px" }}>
               <button onClick={() => setShowDeleteModal(false)} style={{ flex: 1, padding: "14px", borderRadius: "12px", border: "1px solid #e2e8f0", backgroundColor: "#fff", cursor: "pointer", fontWeight: "600" }}>Cancel</button>
-              <button onClick={() => {/* confirmDelete logic here */}} style={{ flex: 1, padding: "14px", borderRadius: "12px", border: "none", backgroundColor: "#ef4444", color: "white", cursor: "pointer", fontWeight: "600" }}>Delete Record</button>
+              <button style={{ flex: 1, padding: "14px", borderRadius: "12px", border: "none", backgroundColor: "#ef4444", color: "white", cursor: "pointer", fontWeight: "600" }}>Delete Record</button>
             </div>
           </div>
         </div>
