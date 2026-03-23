@@ -1,90 +1,86 @@
 /* EmployeePage.css */
 
 .employee-page {
-  /* Ginamit ang Inter font para sa modern dashboard look */
   font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-  padding: 40px;
-  background-color: #f8fafc;
+  padding: 20px; /* Binawasan para maging compact */
+  /* FORCE FIX: Ginawang transparent para lumabas ang background image ng system */
+  background-color: transparent !important; 
   min-height: 100vh;
   display: flex;
   flex-direction: column;
   align-items: center;
 }
 
-/* Page Title Spacing */
+/* Page Title - Ginawang puti o contrast para mabasa sa nature background */
 h1 {
-  margin-bottom: 40px;
-  color: #1e293b;
+  margin-top: 10px;
+  margin-bottom: 30px;
+  color: #1e293b; 
   font-weight: 800;
-  font-size: 2.2rem;
+  font-size: 1.8rem;
   letter-spacing: -1px;
+  /* Optional: lagyan ng text-shadow kung madilim ang background image */
+  text-shadow: 0 2px 4px rgba(255,255,255,0.5); 
 }
 
-/* Visible Card with Theme Header */
+/* Floating Card Look */
 .employee-card {
   width: 100%;
-  max-width: 1300px; /* Niluwagan para sa better spacing */
-  background: #ffffff;
-  border-radius: 24px;
-  box-shadow: 0 15px 35px rgba(0, 0, 0, 0.05); 
-  border: 1px solid #e2e8f0;
+  max-width: 1200px;
+  /* FORCE FIX: Inalis ang solid white, ginawang semi-transparent white para modern */
+  background: rgba(255, 255, 255, 0.95); 
+  backdrop-filter: blur(10px); /* Blur effect para sa background image */
+  border-radius: 16px;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1); 
+  border: 1px solid rgba(255, 255, 255, 0.3);
   overflow: hidden;
 }
 
-/* Emerald Theme Accent */
+/* Emerald Theme Accent - Mas compact padding */
 .card-accent-header {
   background: linear-gradient(135deg, #57bc90 0%, #2d8a64 100%); 
-  padding: 20px 30px;
+  padding: 15px 25px;
   color: white;
   font-weight: 700;
-  font-size: 1.1rem;
+  font-size: 1rem;
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 10px;
 }
 
 .employee-table {
   width: 100%;
   border-collapse: collapse;
-  table-layout: auto;
 }
 
-/* ALIGNMENT & FONT: Pantay na titles at data */
+/* Compact Table Headers */
 .employee-table th {
-  background-color: #f8fafc; 
+  background-color: rgba(248, 250, 252, 0.8); 
   color: #64748b;
   font-weight: 700;
-  font-size: 0.75rem;
+  font-size: 0.7rem;
   text-transform: uppercase;
-  letter-spacing: 1.5px;
-  padding: 24px 30px; /* Mas malaking padding para sa spacing */
+  letter-spacing: 1.2px;
+  padding: 15px 20px; 
   border-bottom: 2px solid #edf2f7;
   text-align: left;
 }
 
+/* Compact Table Cells */
 .employee-table td {
-  padding: 24px 30px; /* Pantay sa th padding */
+  padding: 15px 20px; 
   border-bottom: 1px solid #f1f5f9;
   color: #334155;
-  font-size: 1rem;
+  font-size: 0.9rem;
   text-align: left;
-  vertical-align: middle;
 }
 
-/* Center alignment para sa Status at Actions */
-.employee-table th:nth-child(4), .employee-table td:nth-child(4),
-.employee-table th:nth-child(5), .employee-table td:nth-child(5) {
-  text-align: center;
-}
-
-/* Status Badges Styling */
+/* Status Badges - Compact */
 .status-badge {
-  padding: 8px 16px;
-  border-radius: 12px;
-  font-weight: 800;
-  text-transform: uppercase;
-  font-size: 0.75rem;
-  display: inline-block;
+  padding: 6px 12px;
+  border-radius: 8px;
+  font-weight: 700;
+  font-size: 0.7rem;
 }
 
 .status-badge.pending {
@@ -97,26 +93,18 @@ h1 {
   color: #15803d;
 }
 
-/* ACTIONS: Button Spacing and Font */
-.actions-cell {
-  display: flex;
-  justify-content: center;
-  gap: 12px;
-}
-
+/* Buttons - Compact Design */
 button {
-  padding: 10px 20px;
-  border: none;
-  border-radius: 12px;
-  cursor: pointer;
-  font-weight: 700;
-  font-size: 0.9rem;
-  transition: all 0.2s ease;
+  padding: 8px 16px;
+  border-radius: 8px;
+  font-weight: 600;
+  font-size: 0.85rem;
 }
 
 .approve-btn {
-  background-color: #57bc90; /* Emerald Green */
+  background-color: #57bc90;
   color: #fff;
+  box-shadow: 0 4px 10px rgba(87, 188, 144, 0.2);
 }
 
 .delete-btn {
@@ -124,7 +112,7 @@ button {
   color: #ef4444;
 }
 
-/* Inalis ang hover shift para maging steady */
 button:hover {
-  filter: brightness(0.95);
+  filter: brightness(0.9);
+  transform: translateY(-1px);
 }
