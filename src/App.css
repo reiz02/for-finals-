@@ -12,7 +12,7 @@ body {
   background-color: #f8fafc;
 }
 
-/* BACKGROUND & OVERLAY */
+/* BACKGROUND & OVERLAY - FIXED BLUR ISSUE */
 .main-bg-image {
   position: fixed;
   top: 0;
@@ -27,8 +27,9 @@ body {
 .bg-overlay {
   position: fixed;
   inset: 0;
-  background: rgba(255, 255, 255, 0.6); /* Mas malinaw na overlay para sa readability */
-  backdrop-filter: blur(2px);
+  /* Binabaan ang opacity (0.3) para mas malinaw ang image */
+  background: rgba(255, 255, 255, 0.3); 
+  /* Inalis ang backdrop-filter blur para maging crystal clear */
   z-index: -1;
 }
 
@@ -126,11 +127,11 @@ body {
   overflow: hidden;
 }
 
-/* MODERN HEADER - SMART DESIGN */
+/* MODERN HEADER - GLASS EFFECT WITHOUT BLURRING THE WHOLE BG */
 .header {
   height: 90px;
   background: rgba(255, 255, 255, 0.8);
-  backdrop-filter: blur(15px);
+  backdrop-filter: blur(10px); /* Dito lang may blur para sa readability ng header */
   display: flex;
   align-items: center;
   justify-content: flex-end;
@@ -216,7 +217,8 @@ body {
   flex: 1;
   overflow-y: auto;
   padding: 30px;
-  background: rgba(255, 255, 255, 0.2);
+  /* Konting white tint lang para lumitaw ang content sa ibabaw ng malinaw na bg */
+  background: rgba(255, 255, 255, 0.15); 
 }
 
 /* CUSTOM SCROLLBAR */

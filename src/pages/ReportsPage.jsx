@@ -39,8 +39,6 @@ const ReportsPage = () => {
       if (!res.ok) throw new Error("Server error");
       const data = await res.json();
       setSubmissions(data);
-      
-      // Initial filter for the current view
       applyFilter(data, selectedYear, selectedQuarter);
     } catch (err) {
       console.error("Fetch error:", err);
@@ -190,10 +188,13 @@ const ReportsPage = () => {
   };
 
   const styles = {
-    container: { padding: "20px", fontFamily: "'Inter', sans-serif", backgroundColor: "#f8fafc", minHeight: "100vh" },
+    // Ginawang transparent ang container para makita ang background image ng system
+    container: { padding: "20px", fontFamily: "'Inter', sans-serif", backgroundColor: "transparent", minHeight: "100vh" },
+    // Retain white bg para sa cards at containers
     card: { background: "#fff", padding: "20px", borderRadius: "15px", boxShadow: "0 4px 12px rgba(0,0,0,0.05)", border: "1px solid #e2e8f0", marginBottom: "20px" },
     summaryBox: (borderColor) => ({ background: "#fff", padding: "20px", borderRadius: "12px", borderLeft: `6px solid ${borderColor}`, boxShadow: "0 2px 8px rgba(0,0,0,0.03)", flex: "1 1 200px" }),
-    input: { padding: "10px", borderRadius: "8px", border: "1px solid #e2e8f0", width: "100%", marginBottom: "10px" },
+    // Retain white bg para sa inputs at placeholders
+    input: { padding: "10px", borderRadius: "8px", border: "1px solid #e2e8f0", width: "100%", marginBottom: "10px", backgroundColor: "#fff" },
     primaryBtn: (bgColor) => ({ background: bgColor, color: "white", border: "none", padding: "10px 20px", borderRadius: "8px", cursor: "pointer", fontWeight: "600", display: "flex", alignItems: "center", gap: "8px" }),
     tableContainer: { overflowX: "auto" },
     table: { width: "100%", borderCollapse: "collapse", minWidth: "800px" },
@@ -234,7 +235,6 @@ const ReportsPage = () => {
         <div style={styles.summaryBox("#4e73df")}><h4>Net Income</h4><p style={{fontSize: "1.5rem", fontWeight: "bold"}}>P{totals.net.toLocaleString()}</p></div>
       </div>
 
-      {/* Filter Section - UPDATED QUARTERS */}
       <div style={styles.card}>
         <div style={{display: "flex", gap: "10px", flexWrap: "wrap"}}>
           <select style={{...styles.input, width: "150px"}} value={selectedYear} onChange={(e) => setSelectedYear(e.target.value)}>
@@ -253,7 +253,6 @@ const ReportsPage = () => {
         </div>
       </div>
 
-      {/* Add Record Section */}
       <div style={styles.card}>
         <h3 style={{marginBottom: "15px"}}><FaPlus /> Add Daily Report</h3>
         <form onSubmit={handleSubmit} style={{display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))", gap: "10px"}}>
@@ -265,7 +264,6 @@ const ReportsPage = () => {
         </form>
       </div>
 
-      {/* History Table */}
       <div style={styles.card}>
         <h3 style={{marginBottom: "15px"}}><FaHistory /> History</h3>
         <div style={styles.tableContainer}>
