@@ -1,86 +1,114 @@
 /* EmployeePage.css */
 
+/* --- ROOT CONTAINER --- */
 .employee-page {
   font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-  padding: 20px; /* Binawasan para maging compact */
-  /* FORCE FIX: Ginawang transparent para lumabas ang background image ng system */
-  background-color: transparent !important; 
+  padding: 20px;
+  background-color: transparent !important; /* Lumalabas ang system background image */
   min-height: 100vh;
   display: flex;
   flex-direction: column;
   align-items: center;
+  gap: 20px; /* Space sa pagitan ng title card at table card */
 }
 
-/* Page Title - Ginawang puti o contrast para mabasa sa nature background */
-h1 {
-  margin-top: 10px;
-  margin-bottom: 30px;
-  color: #1e293b; 
+/* --- NEW: LETTUCE LIGHT GREEN TITLE CARD --- */
+.title-card-container {
+  width: 100%;
+  max-width: 1200px;
+}
+
+.header-title-card {
+  /* Fresh Lettuce Light Green Background */
+  background-color: #ebfbee; 
+  padding: 20px 25px;
+  border-radius: 16px;
+  border: 1px solid #d3f9d8;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.03);
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.header-title-card h1 {
+  margin: 0;
+  color: #2b8a3e; /* Dark Lettuce Green */
   font-weight: 800;
-  font-size: 1.8rem;
-  letter-spacing: -1px;
-  /* Optional: lagyan ng text-shadow kung madilim ang background image */
-  text-shadow: 0 2px 4px rgba(255,255,255,0.5); 
+  font-size: 1.6rem;
+  letter-spacing: -0.8px;
+  text-shadow: none; /* Inalis ang shadow para sa flat modern look */
 }
 
-/* Floating Card Look */
+.header-title-card p {
+  margin: 0;
+  font-size: 0.9rem;
+  color: #5c940d; /* Olive green shade for instructions */
+  font-weight: 500;
+  line-height: 1.5;
+}
+
+/* --- FLOATING TABLE CARD --- */
 .employee-card {
   width: 100%;
   max-width: 1200px;
-  /* FORCE FIX: Inalis ang solid white, ginawang semi-transparent white para modern */
-  background: rgba(255, 255, 255, 0.95); 
-  backdrop-filter: blur(10px); /* Blur effect para sa background image */
+  background: rgba(255, 255, 255, 0.96); 
+  backdrop-filter: blur(10px); /* Glassmorphism effect */
   border-radius: 16px;
-  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1); 
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.08); 
   border: 1px solid rgba(255, 255, 255, 0.3);
   overflow: hidden;
 }
 
-/* Emerald Theme Accent - Mas compact padding */
+/* --- CARD HEADER (EMERALD ACCENT) --- */
 .card-accent-header {
   background: linear-gradient(135deg, #57bc90 0%, #2d8a64 100%); 
-  padding: 15px 25px;
+  padding: 12px 20px;
   color: white;
   font-weight: 700;
-  font-size: 1rem;
+  font-size: 0.95rem;
   display: flex;
   align-items: center;
   gap: 10px;
 }
 
+/* --- TABLE STYLES --- */
 .employee-table {
   width: 100%;
   border-collapse: collapse;
 }
 
-/* Compact Table Headers */
 .employee-table th {
   background-color: rgba(248, 250, 252, 0.8); 
   color: #64748b;
   font-weight: 700;
-  font-size: 0.7rem;
+  font-size: 0.75rem;
   text-transform: uppercase;
   letter-spacing: 1.2px;
   padding: 15px 20px; 
-  border-bottom: 2px solid #edf2f7;
+  border-bottom: 2px solid #f1f5f9;
   text-align: left;
 }
 
-/* Compact Table Cells */
 .employee-table td {
-  padding: 15px 20px; 
+  padding: 14px 20px; 
   border-bottom: 1px solid #f1f5f9;
   color: #334155;
   font-size: 0.9rem;
   text-align: left;
 }
 
-/* Status Badges - Compact */
+/* Table Row Hover effect */
+.employee-table tr:hover td {
+  background-color: rgba(241, 245, 249, 0.5);
+}
+
+/* --- STATUS BADGES --- */
 .status-badge {
-  padding: 6px 12px;
+  padding: 5px 12px;
   border-radius: 8px;
   font-weight: 700;
   font-size: 0.7rem;
+  display: inline-block;
 }
 
 .status-badge.pending {
@@ -93,26 +121,42 @@ h1 {
   color: #15803d;
 }
 
-/* Buttons - Compact Design */
+/* --- BUTTON STYLES --- */
 button {
   padding: 8px 16px;
   border-radius: 8px;
   font-weight: 600;
   font-size: 0.85rem;
+  cursor: pointer;
+  border: none;
+  transition: all 0.2s ease;
 }
 
 .approve-btn {
   background-color: #57bc90;
   color: #fff;
   box-shadow: 0 4px 10px rgba(87, 188, 144, 0.2);
+  margin-right: 8px;
 }
 
-.delete-btn {
-  background-color: #fee2e2;
-  color: #ef4444;
-}
-
-button:hover {
-  filter: brightness(0.9);
+.approve-btn:hover {
+  background-color: #46a67e;
   transform: translateY(-1px);
+}
+
+/* Tomato Red Delete Button */
+.delete-btn {
+  background-color: #d62828; 
+  color: #ffffff; 
+  box-shadow: 0 4px 12px rgba(214, 40, 40, 0.2);
+}
+
+.delete-btn:hover {
+  background-color: #b91d1d; 
+  transform: translateY(-2px);
+  box-shadow: 0 6px 15px rgba(214, 40, 40, 0.3);
+}
+
+.delete-btn:active {
+  transform: translateY(0);
 }

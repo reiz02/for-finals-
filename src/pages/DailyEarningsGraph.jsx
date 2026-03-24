@@ -6,11 +6,11 @@ import {
 
 const DailyEarningsGraph = ({ data, mintColor }) => {
   
-  // I-aggregate ang data per day (Show last 7 entries for cleaner daily view)
   const processData = (rawData) => {
     const dailyMap = {};
-    
-    rawData.forEach(item => {
+    const sortedData = [...rawData].sort((a, b) => new Date(a.date) - new Date(b.date));
+
+    sortedData.forEach(item => {
       if (item.type === "Income") {
         const dateLabel = new Date(item.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
         dailyMap[dateLabel] = (dailyMap[dateLabel] || 0) + Number(item.amount);
@@ -20,49 +20,56 @@ const DailyEarningsGraph = ({ data, mintColor }) => {
     return Object.keys(dailyMap).map(date => ({
       name: date,
       earnings: dailyMap[date]
-    })).slice(-7); // Huling 7 araw lang para hindi siksikan ang bar
+    })).slice(-7); 
   };
 
   const chartData = processData(data);
 
   return (
-    <ResponsiveContainer width="100%" height={300}>
+    <ResponsiveContainer width="100%" height="100%">
       <BarChart
         data={chartData}
-        margin={{ top: 10, right: 10, left: -20, bottom: 0 }}
-        barSize={40} // Mas makapal na bar dahil iisa na lang siya
+        margin={{ top: 10, right: 20, left: -10, bottom: 25 }} 
+        barSize={45} 
       >
-        <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+        <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
         
         <XAxis 
           dataKey="name" 
           axisLine={false} 
           tickLine={false} 
-          tick={{ fontSize: 11, fill: "#94a3b8", fontWeight: 500 }} 
+          interval={0}
+          /* GINAWANG BLACK ANG FILL AT DINAGDAGAN ANG FONT WEIGHT */
+          tick={{ fontSize: 12, fill: "#000000", fontWeight: 700 }} 
+          dy={10} 
         />
         
         <YAxis 
           axisLine={false} 
           tickLine={false} 
-          tick={{ fontSize: 11, fill: "#94a3b8" }} 
+          /* GINAWANG BLACK PARA MAS VISIBLE ANG MGA PRESYO */
+          tick={{ fontSize: 11, fill: "#000000", fontWeight: 600 }} 
           tickFormatter={(value) => `₱${value}`}
         />
         
         <Tooltip 
-          cursor={{ fill: "rgba(87, 188, 144, 0.05)" }}
+          cursor={{ fill: "rgba(87, 188, 144, 0.1)" }}
           contentStyle={{ 
             borderRadius: "12px", 
-            border: "none", 
-            boxShadow: "0 10px 15px rgba(0,0,0,0.05)",
-            fontSize: "12px"
+            border: "1px solid #e2e8f0", 
+            boxShadow: "0 10px 15px rgba(0,0,0,0.1)",
+            fontSize: "13px",
+            color: "#000000",
+            fontWeight: "bold"
           }} 
-          formatter={(value) => [`₱${value.toLocaleString()}`, "Net Earnings"]}
+          formatter={(value) => [`₱${value.toLocaleString()}`, "Earnings"]}
         />
 
         <Bar 
           dataKey="earnings" 
           fill={mintColor} 
-          radius={[10, 10, 0, 0]} // Rounded corners sa taas
+          radius={[6, 6, 0, 0]} 
+          animationDuration={1500}
         />
       </BarChart>
     </ResponsiveContainer>

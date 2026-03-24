@@ -1,16 +1,14 @@
 import React, { useState, useEffect } from "react";
 import "./EmployeePage.css";
+import { FaUsers, FaUserCheck } from "react-icons/fa"; // Nagdagdag ako ng icons para mas maganda
 
 function EmployeePage() {
   const [employees, setEmployees] = useState([]);
   const [loading, setLoading] = useState(true);
   const [dialog, setDialog] = useState({ show: false, employeeId: null });
 
-  // Fetch employees logic
   const fetchEmployees = async (isInitialLoad = false) => {
-    // STEADY FIX: I-set lang ang loading kung ito ang unang beses na mag-load
     if (isInitialLoad) setLoading(true);
-    
     try {
       const res = await fetch("http://localhost:5000/api/employees");
       if (res.ok) {
@@ -25,8 +23,8 @@ function EmployeePage() {
   };
 
   useEffect(() => {
-    fetchEmployees(true); // Initial load lang ang may loading text
-    const interval = setInterval(() => fetchEmployees(false), 5000); // Silent refresh
+    fetchEmployees(true);
+    const interval = setInterval(() => fetchEmployees(false), 5000);
     return () => clearInterval(interval);
   }, []);
 
@@ -46,18 +44,29 @@ function EmployeePage() {
 
   return (
     <div className="employee-page">
-      <div className="employee-header">
-        <h1>Employee Management</h1>
+      
+      {/* BAGONG TITLE CARD SECTION (Lettuce Green) */}
+      <div className="title-card-container">
+        <div className="header-title-card">
+          <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+            <FaUserCheck style={{ color: "#2b8a3e", fontSize: "24px" }} />
+            <h1>Employee Management</h1>
+          </div>
+          <p>
+            Welcome to the Employee Management portal. Here you can monitor staff profiles, 
+            approve new registration requests, and manage the official list of active employees.
+          </p>
+        </div>
       </div>
 
+      {/* TABLE CARD SECTION */}
       <div className="employee-card">
-        {/* VISIBLE THEME: Added Card Accent Header */}
         <div className="card-accent-header">
-          <span>👥 Registered Employees</span>
+          <FaUsers /> <span>Registered Employees</span>
         </div>
 
         {loading ? (
-          <p className="status-text">Loading employees...</p>
+          <p className="status-text" style={{ padding: "20px", textAlign: "center" }}>Loading employees...</p>
         ) : (
           <div className="table-container">
             <table className="employee-table">
@@ -72,7 +81,7 @@ function EmployeePage() {
               </thead>
               <tbody>
                 {employees.length === 0 ? (
-                  <tr><td colSpan="5" className="status-text">No employees found.</td></tr>
+                  <tr><td colSpan="5" className="status-text" style={{ textAlign: "center", padding: "20px" }}>No employees found.</td></tr>
                 ) : (
                   employees.map((emp) => (
                     <tr key={emp._id}>
@@ -103,14 +112,15 @@ function EmployeePage() {
         )}
       </div>
 
+      {/* DELETE CONFIRMATION DIALOG */}
       {dialog.show && (
         <div className="dialog-overlay">
-          <div className="dialog-box">
-            <h3>Confirm Delete</h3>
+          <div className="dialog-box" style={{ background: "#fff", padding: "25px", borderRadius: "15px", textAlign: "center" }}>
+            <h3 style={{ color: "#d62828" }}>Confirm Delete</h3>
             <p>Are you sure you want to delete this employee? This action cannot be undone.</p>
-            <div className="dialog-btn-container">
+            <div className="dialog-btn-container" style={{ display: "flex", gap: "10px", justifyContent: "center", marginTop: "20px" }}>
               <button
-                className="confirm-btn"
+                className="delete-btn"
                 onClick={() => {
                   deleteEmployee(dialog.employeeId);
                   setDialog({ show: false, employeeId: null });
@@ -118,7 +128,10 @@ function EmployeePage() {
               >
                 Yes, Delete
               </button>
-              <button className="cancel-btn" onClick={() => setDialog({ show: false, employeeId: null })}>
+              <button 
+                onClick={() => setDialog({ show: false, employeeId: null })}
+                style={{ background: "#f1f5f9", color: "#64748b" }}
+              >
                 Cancel
               </button>
             </div>

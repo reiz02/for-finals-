@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useCallback } from "react";
 import { 
   FaTrash, FaPlus, FaHistory, FaCheckCircle, 
-  FaSearch, FaFilePdf, FaEdit, FaTimes 
+  FaSearch, FaFilePdf, FaEdit, FaTimes, FaFileInvoiceDollar 
 } from "react-icons/fa";
 import jsPDF from "jspdf"; 
 import autoTable from "jspdf-autotable";
@@ -188,12 +188,35 @@ const ReportsPage = () => {
   };
 
   const styles = {
-    // Ginawang transparent ang container para makita ang background image ng system
     container: { padding: "20px", fontFamily: "'Inter', sans-serif", backgroundColor: "transparent", minHeight: "100vh" },
-    // Retain white bg para sa cards at containers
+    
+    // Header Card Layout
+    headerCard: { 
+      background: "#fff", 
+      padding: "20px 25px", 
+      borderRadius: "15px", 
+      marginBottom: "20px", 
+      boxShadow: "0 4px 12px rgba(0,0,0,0.05)", 
+      border: "1px solid #e2e8f0",
+      display: "flex",
+      alignItems: "center",
+      gap: "20px"
+    },
+    headerIcon: {
+      background: "#eefaf5",
+      color: "#27ae60",
+      padding: "15px",
+      borderRadius: "12px",
+      fontSize: "1.5rem",
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "center"
+    },
+    headerTitle: { fontSize: "1.6rem", fontWeight: "800", color: "#0f172a", margin: 0, letterSpacing: "-1px" },
+    headerSubtitle: { fontSize: "0.9rem", color: "#64748b", margin: "4px 0 0 0" },
+    
     card: { background: "#fff", padding: "20px", borderRadius: "15px", boxShadow: "0 4px 12px rgba(0,0,0,0.05)", border: "1px solid #e2e8f0", marginBottom: "20px" },
     summaryBox: (borderColor) => ({ background: "#fff", padding: "20px", borderRadius: "12px", borderLeft: `6px solid ${borderColor}`, boxShadow: "0 2px 8px rgba(0,0,0,0.03)", flex: "1 1 200px" }),
-    // Retain white bg para sa inputs at placeholders
     input: { padding: "10px", borderRadius: "8px", border: "1px solid #e2e8f0", width: "100%", marginBottom: "10px", backgroundColor: "#fff" },
     primaryBtn: (bgColor) => ({ background: bgColor, color: "white", border: "none", padding: "10px 20px", borderRadius: "8px", cursor: "pointer", fontWeight: "600", display: "flex", alignItems: "center", gap: "8px" }),
     tableContainer: { overflowX: "auto" },
@@ -212,6 +235,19 @@ const ReportsPage = () => {
         </div>
       )}
 
+      {/* Financial Records Header */}
+      <div style={styles.headerCard}>
+        <div style={styles.headerIcon}>
+          <FaFileInvoiceDollar />
+        </div>
+        <div>
+          <h2 style={styles.headerTitle}>Financial Records</h2>
+          <p style={styles.headerSubtitle}>
+            Track and manage farm revenue, operational expenses, and generated fiscal reports.
+          </p>
+        </div>
+      </div>
+
       {editingItem && (
         <div style={styles.modalOverlay}>
           <div style={{...styles.card, width: "400px"}}>
@@ -223,18 +259,22 @@ const ReportsPage = () => {
             <input style={styles.input} type="text" value={editForm.description} onChange={(e) => setEditForm({...editForm, description: e.target.value})} />
             <select style={styles.input} value={editForm.type} onChange={(e) => setEditForm({...editForm, type: e.target.value})}><option value="Income">Income</option><option value="Expense">Expense</option></select>
             <input style={styles.input} type="number" value={editForm.amount} onChange={(e) => setEditForm({...editForm, amount: e.target.value})} />
-            <button onClick={handleUpdate} style={styles.primaryBtn("#4e73df")}>Update</button>
+            <div style={{display: "flex", gap: "10px"}}>
+              <button onClick={handleUpdate} style={styles.primaryBtn("#4e73df")}>Update</button>
+              <button onClick={() => setEditingItem(null)} style={styles.primaryBtn("#64748b")}>Cancel</button>
+            </div>
           </div>
         </div>
       )}
 
-      {/* Summary Section */}
+      {/* Summary Section - */}
       <div style={{ display: "flex", gap: "15px", flexWrap: "wrap", marginBottom: "20px" }}>
-        <div style={styles.summaryBox("#57bc90")}><h4>Gross Income</h4><p style={{fontSize: "1.5rem", fontWeight: "bold"}}>P{totals.gross.toLocaleString()}</p></div>
+        <div style={styles.summaryBox("#57bc90")}><h4>Total / Gross Income</h4><p style={{fontSize: "1.5rem", fontWeight: "bold"}}>P{totals.gross.toLocaleString()}</p></div>
         <div style={styles.summaryBox("#ff6b6b")}><h4>Expenses</h4><p style={{fontSize: "1.5rem", fontWeight: "bold"}}>P{totals.expenses.toLocaleString()}</p></div>
         <div style={styles.summaryBox("#4e73df")}><h4>Net Income</h4><p style={{fontSize: "1.5rem", fontWeight: "bold"}}>P{totals.net.toLocaleString()}</p></div>
       </div>
 
+      {/* Filtering Section - */}
       <div style={styles.card}>
         <div style={{display: "flex", gap: "10px", flexWrap: "wrap"}}>
           <select style={{...styles.input, width: "150px"}} value={selectedYear} onChange={(e) => setSelectedYear(e.target.value)}>
@@ -253,6 +293,7 @@ const ReportsPage = () => {
         </div>
       </div>
 
+      {/* Add Record Form - */}
       <div style={styles.card}>
         <h3 style={{marginBottom: "15px"}}><FaPlus /> Add Daily Report</h3>
         <form onSubmit={handleSubmit} style={{display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))", gap: "10px"}}>
@@ -264,6 +305,7 @@ const ReportsPage = () => {
         </form>
       </div>
 
+      {/* History Table - */}
       <div style={styles.card}>
         <h3 style={{marginBottom: "15px"}}><FaHistory /> History</h3>
         <div style={styles.tableContainer}>

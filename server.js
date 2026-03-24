@@ -46,17 +46,14 @@ app.use("/uploads", express.static("uploads"));
 // ===========================
 mongoose
   .connect(
-    "mongodb://reicha:charm123@ac-rrphu9p-shard-00-00.vnlcxrd.mongodb.net:27017,ac-rrphu9p-shard-00-01.vnlcxrd.mongodb.net:27017,ac-rrphu9p-shard-00-02.vnlcxrd.mongodb.net:27017/?ssl=true&replicaSet=atlas-sajxzk-shard-0&authSource=admin&appName=Cluster0",
+    "mongodb://reicha:charm123@ac-rrphu9p-shard-00-00.vnlcxrd.mongodb.net:27017,ac-rrphu9p-shard-00-01.vnlcxrd.mongodb.net:27017,ac-rrphu9p-shard-00-02.vnlcxrd.mongodb.net:27017/FarmOpsDB?ssl=true&replicaSet=atlas-sajxzk-shard-0&authSource=admin&appName=Cluster0",
     {
       serverSelectionTimeoutMS: 5000,
       bufferCommands: false,
     }
   )
-  .then(() => console.log("✅ MongoDB Connected!"))
-  .catch((err) => {
-    console.error("❌ CONNECTION FAILED:", err.message);
-    process.exit(1);
-  });
+  .then(() => console.log("Successfully connected to FarmOpsDB"))
+  .catch((err) => console.error("MongoDB Connection Error:", err));
 
 // ===========================
 // SCHEMAS

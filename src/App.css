@@ -108,10 +108,12 @@ body {
   box-shadow: 0 10px 15px -3px rgba(39, 174, 96, 0.3);
 }
 
+/* UPDATE SA LOGOUT BUTTON - TOMATO RED THEME */
 .logout-btn {
   margin-top: auto;
-  background: #fee2e2;
-  color: #ef4444;
+  /* Kulay ng hinog na kamatis (Tomato Red) */
+  background: #d62828; 
+  color: #ffffff; /* Puting text para malinaw agad */
   border: none;
   padding: 15px;
   border-radius: 14px;
@@ -121,15 +123,23 @@ body {
   justify-content: center;
   gap: 10px;
   font-weight: 800;
-  font-size: 0.9rem;
-  transition: 0.2s;
+  font-size: 0.95rem;
+  transition: all 0.3s ease;
+  /* Optional: Dagdag ng anino para mag-pop out */
+  box-shadow: 0 4px 12px rgba(214, 40, 40, 0.2); 
 }
 
 .logout-btn:hover {
-  background: #ef4444;
+  /* Mas madilim na pula kapag hinover (Over-ripe tomato) */
+  background: #b91d1d; 
   color: white;
+  transform: translateY(-2px);
+  box-shadow: 0 6px 15px rgba(214, 40, 40, 0.3);
 }
 
+.logout-btn:active {
+  transform: translateY(0);
+}
 /* MAIN CONTENT AREA */
 .main-content {
   flex: 1;
