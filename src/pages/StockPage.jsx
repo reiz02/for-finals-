@@ -1,41 +1,24 @@
 import React, { useState, useEffect, useCallback } from "react";
+import { Plus, Trash2, Edit3, Image as ImageIcon, Package, AlertTriangle } from "lucide-react";
 
 function StockPage() {
   const user = JSON.parse(localStorage.getItem("user"));
-  const role = user?.role; // Admin or Employee
-  
-  // Products State
   const [products, setProducts] = useState([]);
   
-  // Add Product States
+  // Form States
   const [name, setName] = useState("");
   const [price, setPrice] = useState("");
   const [stock, setStock] = useState("");
   const [image, setImage] = useState(null);
   const [preview, setPreview] = useState("");
 
-  // Edit States
-  const [editingId, setEditingId] = useState(null);
-  const [editData, setEditData] = useState({ name: "", price: "", stock: "" });
-
-  // Modal State
   const [modal, setModal] = useState({ show: false, message: "", type: "alert", onConfirm: null });
 
-  const showDialog = (message, type = "alert", onConfirm = null) => {
-    setModal({ show: true, message, type, onConfirm });
-  };
-
-  const closeModal = () => {
-    setModal({ ...modal, show: false });
-  };
-
-  // FETCH PRODUCTS
   const fetchProducts = useCallback(async () => {
     try {
       const res = await fetch("http://localhost:5000/api/products", {
         headers: { "userid": user?.id }
       });
-      if (!res.ok) return setProducts([]);
       const data = await res.json();
       setProducts(Array.isArray(data) ? data : data.products || []);
     } catch (error) {
@@ -46,18 +29,18 @@ function StockPage() {
 
   useEffect(() => { fetchProducts(); }, [fetchProducts]);
 
-  // IMAGE HANDLING
   const handleImage = (e) => {
     const file = e.target.files[0];
-    setImage(file);
-    if (file) setPreview(URL.createObjectURL(file));
+    if (file) {
+      setImage(file);
+      setPreview(URL.createObjectURL(file));
+    }
   };
 
-  // ADD PRODUCT
   const addProduct = async () => {
     if (!name || !price || !stock) {
-      showDialog("Please complete all required fields");
-      return;
+        setModal({show: true, message: "Please complete all fields"});
+        return;
     }
     const formData = new FormData();
     formData.append("name", name);
@@ -71,163 +54,145 @@ function StockPage() {
         headers: { "userid": user?.id },
         body: formData,
       });
-      if (!res.ok) return showDialog("Error adding product");
-      
-      setName(""); setPrice(""); setStock(""); setImage(null); setPreview("");
-      fetchProducts();
-      showDialog("Product added successfully!");
+      if (res.ok) {
+        setName(""); setPrice(""); setStock(""); setImage(null); setPreview("");
+        fetchProducts();
+      }
     } catch (error) { console.error(error); }
   };
 
-  // EDIT & SAVE LOGIC
-  const handleEditClick = (p) => {
-    setEditingId(p._id);
-    setEditData({ name: p.name, price: p.price, stock: p.stock });
-  };
-
-  const handleSave = async (id) => {
-    try {
-      const res = await fetch(`http://localhost:5000/api/products/${id}`, {
-        method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-          "userid": user?.id
-        },
-        body: JSON.stringify(editData),
-      });
-
-      if (res.ok) {
-        setEditingId(null);
-        fetchProducts();
-        showDialog("Product updated successfully!");
-      } else {
-        showDialog("Failed to update product.");
-      }
-    } catch (error) {
-      console.error("Update error:", error);
-    }
-  };
-
-  // DELETE PRODUCT
-  const deleteProduct = async (id) => {
-    showDialog("Are you sure you want to delete this product?", "confirm", async () => {
-      try {
-        await fetch(`http://localhost:5000/api/products/${id}`, {
-          method: "DELETE",
-          headers: { "userid": user?.id }
-        });
-        fetchProducts();
-      } catch (error) {
-        console.error("Delete error:", error);
+  const deleteProduct = (id) => {
+    setModal({
+      show: true,
+      message: "Are you sure you want to delete this?",
+      type: "confirm",
+      onConfirm: async () => {
+        try {
+          await fetch(`http://localhost:5000/api/products/${id}`, {
+            method: "DELETE",
+            headers: { "userid": user?.id }
+          });
+          fetchProducts();
+        } catch (error) { console.error(error); }
       }
     });
   };
 
   return (
-    <div style={containerStyle}>
-      <div style={headerSectionStyle}>
+    <div style={pageWrapper}>
+      {/* 1. HEADER SECTION - NAKA-WHITE CARD PARA KITA */}
+      <div style={headerCard}>
         <div>
-          <h2 style={titleStyle}>Product Inventory</h2>
-          <p style={subtitleStyle}>Monitor and manage farm stock levels efficiently.</p>
+          <h2 style={titleText}>Product Inventory</h2>
+          <p style={subtitleText}>Monitor and manage farm stock levels efficiently.</p>
         </div>
-        <div style={statsBadgeStyle}>Total: {products.length} Items</div>
+        <div style={countBadge}>Total Items: {products.length}</div>
       </div>
 
-      {/* FORM SECTION (Visible to Admin or Inventory Section Employees) */}
-      <div style={formCardStyle}>
-        <div style={cardHeaderStyle}>Register New Item</div>
-        <div style={formGridStyle}>
-          <div style={inputGroupStyle}>
-            <label style={labelStyle}>Product Name</label>
-            <input type="text" placeholder="Item name" value={name} onChange={(e) => setName(e.target.value)} style={inputStyle} />
+      <div style={mainLayout}>
+        {/* 2. LEFT SIDE: FORM PANEL */}
+        <div style={formSection}>
+          <div style={formHeader}>
+            <Plus size={18} /> <span>New Product</span>
           </div>
-          <div style={inputGroupStyle}>
-            <label style={labelStyle}>Price (₱)</label>
-            <input type="number" placeholder="0.00" value={price} onChange={(e) => setPrice(e.target.value)} style={inputStyle} />
-          </div>
-          <div style={inputGroupStyle}>
-            <label style={labelStyle}>Stock</label>
-            <input type="number" placeholder="0" value={stock} onChange={(e) => setStock(e.target.value)} style={inputStyle} />
-          </div>
-          <div style={inputGroupStyle}>
-            <label style={labelStyle}>Photo</label>
-            <input type="file" accept="image/*" onChange={handleImage} style={fileInputStyle} />
-          </div>
-        </div>
-        {preview && <div style={previewWrapperStyle}><img src={preview} alt="preview" style={imagePreviewStyle} /></div>}
-        <button onClick={addProduct} style={addButtonStyle}>Add Product</button>
-      </div>
+          <div style={formBody}>
+            <div style={inputGroup}>
+              <label style={labelStyle}>PRODUCT NAME</label>
+              <input type="text" placeholder="e.g. Lettuce" value={name} onChange={(e)=>setName(e.target.value)} style={inputStyle} />
+            </div>
+            
+            <div style={rowInput}>
+              <div style={inputGroup}>
+                <label style={labelStyle}>PRICE (₱)</label>
+                <input type="number" placeholder="0" value={price} onChange={(e)=>setPrice(e.target.value)} style={inputStyle} />
+              </div>
+              <div style={inputGroup}>
+                <label style={labelStyle}>STOCK</label>
+                <input type="number" placeholder="0" value={stock} onChange={(e)=>setStock(e.target.value)} style={inputStyle} />
+              </div>
+            </div>
 
-      {/* TABLE SECTION */}
-      <div style={tableCardStyle}>
-        <table style={tableStyle}>
-          <thead>
-            <tr style={tableHeaderRowStyle}>
-              <th style={thStyle}>Image</th>
-              <th style={thStyle}>Product</th>
-              <th style={thStyle}>Price</th>
-              <th style={thStyle}>In Stock</th>
-              <th style={{...thStyle, textAlign: 'center'}}>Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            {products.map((p) => (
-              <tr key={p._id} style={trStyle}>
-                <td style={tdStyle}>
-                  {p.image ? (
-                    <img src={`http://localhost:5000${p.image}`} alt={p.name} style={productImageStyle} />
-                  ) : (
-                    <div style={noImageStyle}>No Image</div>
-                  )}
-                </td>
-                <td style={tdStyle}>
-                  {editingId === p._id ? (
-                    <input style={inlineInputStyle} value={editData.name} onChange={(e) => setEditData({...editData, name: e.target.value})} />
-                  ) : (
-                    <span style={{fontWeight: '600', color: '#1e293b'}}>{p.name}</span>
-                  )}
-                </td>
-                <td style={tdStyle}>
-                  {editingId === p._id ? (
-                    <input type="number" style={inlineInputStyle} value={editData.price} onChange={(e) => setEditData({...editData, price: e.target.value})} />
-                  ) : `₱${p.price}`}
-                </td>
-                <td style={tdStyle}>
-                  {editingId === p._id ? (
-                    <input type="number" style={inlineInputStyle} value={editData.stock} onChange={(e) => setEditData({...editData, stock: e.target.value})} />
-                  ) : (
-                    <span style={getStockBadgeStyle(p.stock)}>{p.stock} units</span>
-                  )}
-                </td>
-                <td style={{...tdStyle, textAlign: 'center'}}>
-                  <div style={actionsContainerStyle}>
-                    {editingId === p._id ? (
-                      <>
-                        <button onClick={() => handleSave(p._id)} style={saveButtonStyle}>Save</button>
-                        <button onClick={() => setEditingId(null)} style={cancelButtonStyle}>Cancel</button>
-                      </>
-                    ) : (
-                      <>
-                        <button onClick={() => handleEditClick(p)} style={editButtonStyle}>Edit</button>
-                        <button onClick={() => deleteProduct(p._id)} style={deleteButtonStyle}>Delete</button>
-                      </>
-                    )}
+            <div style={inputGroup}>
+              <label style={labelStyle}>IMAGE</label>
+              <label style={uploadBox}>
+                <input type="file" hidden onChange={handleImage} accept="image/*" />
+                {preview ? (
+                  <img src={preview} alt="prev" style={previewImg} />
+                ) : (
+                  <div style={{display:'flex', flexDirection:'column', alignItems:'center', gap:'5px'}}>
+                    <ImageIcon size={20} color="#94a3b8" />
+                    <span style={{fontSize:'10px', color:'#94a3b8'}}>Upload</span>
                   </div>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+                )}
+              </label>
+            </div>
+
+            <button onClick={addProduct} style={addBtn}>Add to Inventory</button>
+          </div>
+        </div>
+
+        {/* 3. RIGHT SIDE: CATALOG WITH WHITE BACKGROUND SECTION */}
+        <div style={catalogContainer}>
+          <div style={catalogHeaderCard}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+              <Package size={20} color="#27ae60" />
+              <h3 style={sectionTitle}>Current Inventory</h3>
+            </div>
+          </div>
+
+          <div style={catalogBody}>
+            <div style={cardGrid}>
+              {products.map((p) => (
+                <div key={p._id} style={productCard}>
+                  {p.stock <= 5 && (
+                    <div style={lowStockTag}>
+                      <AlertTriangle size={10} /> LOW
+                    </div>
+                  )}
+                  
+                  <div style={cardActions}>
+                    <button style={iconBtn}><Edit3 size={12} /></button>
+                    <button onClick={() => deleteProduct(p._id)} style={deleteIconBtn}><Trash2 size={12} /></button>
+                  </div>
+
+                  <div style={imgContainer}>
+                    <img 
+                      src={p.image ? `http://localhost:5000${p.image}` : "/api/placeholder/150/150"} 
+                      alt={p.name} 
+                      style={cardImg} 
+                    />
+                  </div>
+
+                  <div style={cardBody}>
+                    <h4 style={pName}>{p.name}</h4>
+                    <div style={pMeta}>
+                      <div style={metaCol}>
+                        <span style={metaLabel}>PRICE</span>
+                        <span style={metaVal}>₱{p.price}</span>
+                      </div>
+                      <div style={{ ...metaCol, textAlign: 'right' }}>
+                        <span style={metaLabel}>STOCK</span>
+                        <span style={{ ...metaVal, color: p.stock <= 5 ? '#ef4444' : '#0f172a' }}>
+                          {p.stock}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
       </div>
 
-      {/* DIALOG MODAL */}
+      {/* MODAL SYSTEM */}
       {modal.show && (
-        <div style={modalOverlayStyle}>
-          <div style={modalContentStyle}>
-            <p style={{ marginBottom: "25px", fontSize: "1.1rem", color: "#1e293b", fontWeight: "500" }}>{modal.message}</p>
-            <div style={{ display: "flex", justifyContent: "center", gap: "12px" }}>
-              <button onClick={() => { if(modal.onConfirm) modal.onConfirm(); closeModal(); }} style={confirmBtnStyle}>Confirm</button>
-              {modal.type === "confirm" && <button onClick={closeModal} style={cancelBtnStyle}>Cancel</button>}
+        <div style={modalOverlay}>
+          <div style={modalBox}>
+            <p style={{fontWeight:'700', marginBottom:'20px'}}>{modal.message}</p>
+            <div style={{display:'flex', gap:'10px', justifyContent:'center'}}>
+              <button onClick={() => { if(modal.onConfirm) modal.onConfirm(); setModal({show:false}); }} style={confirmBtn}>Confirm</button>
+              {modal.type === "confirm" && <button onClick={()=>setModal({show:false})} style={cancelBtn}>Cancel</button>}
             </div>
           </div>
         </div>
@@ -236,50 +201,82 @@ function StockPage() {
   );
 }
 
-// --- CSS-IN-JS STYLES ---
-const containerStyle = { width: "100%", padding: "20px" };
-const headerSectionStyle = { display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "30px" };
-const titleStyle = { fontSize: "1.8rem", fontWeight: "800", color: "#1e293b", margin: 0 };
-const subtitleStyle = { color: "#64748b", margin: "5px 0 0 0" };
-const statsBadgeStyle = { background: "#fff", padding: "10px 20px", borderRadius: "12px", fontWeight: "700", color: "#2d8a64", boxShadow: "0 4px 10px rgba(0,0,0,0.05)" };
+// --- CSS-IN-JS (OPTIMIZED WITH WHITE CARDS) ---
+const pageWrapper = { padding: "20px 30px", height: "100%", display: "flex", flexDirection: "column" };
 
-const formCardStyle = { background: "#fff", padding: "25px", borderRadius: "15px", boxShadow: "0 4px 20px rgba(0,0,0,0.05)", marginBottom: "30px" };
-const cardHeaderStyle = { fontSize: "1.1rem", fontWeight: "700", marginBottom: "20px", color: "#1e293b" };
-const formGridStyle = { display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: "20px" };
-const inputGroupStyle = { display: "flex", flexDirection: "column", gap: "8px" };
-const labelStyle = { fontSize: "0.85rem", fontWeight: "600", color: "#64748b" };
-const inputStyle = { padding: "12px", borderRadius: "10px", border: "1px solid #e2e8f0", fontSize: "0.95rem" };
-const fileInputStyle = { fontSize: "0.85rem", color: "#64748b" };
-const addButtonStyle = { marginTop: "20px", padding: "12px 25px", background: "#10b981", color: "#fff", border: "none", borderRadius: "10px", cursor: "pointer", fontWeight: "700" };
+const headerCard = { 
+  background: "#fff", 
+  padding: "15px 25px", 
+  borderRadius: "20px", 
+  display: "flex", 
+  justifyContent: "space-between", 
+  alignItems: "center", 
+  marginBottom: "20px",
+  boxShadow: "0 4px 15px rgba(0,0,0,0.03)",
+  border: "1px solid #f1f5f9"
+};
 
-const tableCardStyle = { background: "#fff", borderRadius: "15px", overflow: "hidden", boxShadow: "0 4px 20px rgba(0,0,0,0.05)" };
-const tableStyle = { width: "100%", borderCollapse: "collapse" };
-const tableHeaderRowStyle = { backgroundColor: "#f8fafc" };
-const thStyle = { padding: "15px 20px", textAlign: "left", fontSize: "0.75rem", textTransform: "uppercase", color: "#64748b", borderBottom: "1px solid #f1f5f9" };
-const tdStyle = { padding: "15px 20px", borderBottom: "1px solid #f1f5f9" };
-const trStyle = { transition: "0.2s" };
+const titleText = { fontSize: "1.6rem", fontWeight: "900", color: "#0f172a", margin: 0, letterSpacing: "-1px" };
+const subtitleText = { color: "#64748b", fontSize: "0.9rem", margin: "4px 0 0 0" };
+const countBadge = { background: "#eefaf5", color: "#27ae60", padding: "6px 15px", borderRadius: "20px", fontSize: "12px", fontWeight: "800" };
 
-const productImageStyle = { width: "50px", height: "50px", borderRadius: "8px", objectFit: "cover" };
-const noImageStyle = { width: "50px", height: "50px", borderRadius: "8px", background: "#f1f5f9", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "0.6rem", color: "#94a3b8" };
+const mainLayout = { display: "flex", gap: "20px", flex: 1, overflow: "hidden" };
 
-const getStockBadgeStyle = (stock) => ({
-  padding: "5px 10px", borderRadius: "6px", fontSize: "0.8rem", fontWeight: "700",
-  backgroundColor: stock < 10 ? "#fee2e2" : "#dcfce7", color: stock < 10 ? "#ef4444" : "#15803d"
-});
+// Form Section
+const formSection = { width: "280px", background: "#fff", borderRadius: "20px", border: "1px solid #f1f5f9", height: "fit-content", boxShadow: "0 4px 15px rgba(0,0,0,0.03)" };
+const formHeader = { background: "#5dbb91", color: "#fff", padding: "15px 20px", borderTopLeftRadius: "20px", borderTopRightRadius: "20px", fontWeight: "800", fontSize: "0.9rem", display: "flex", alignItems: "center", gap: "8px" };
+const formBody = { padding: "20px", display: "flex", flexDirection: "column", gap: "15px" };
+const inputGroup = { display: "flex", flexDirection: "column", gap: "5px" };
+const labelStyle = { fontSize: "10px", fontWeight: "900", color: "#94a3b8", letterSpacing: "0.5px" };
+const inputStyle = { padding: "10px", borderRadius: "10px", border: "1px solid #f1f5f9", background: "#f8fafc", fontSize: "13px", outline: "none" };
+const rowInput = { display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px" };
+const uploadBox = { height: "90px", border: "2px dashed #e2e8f0", borderRadius: "12px", background: "#f8fafc", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", overflow: "hidden" };
+const previewImg = { width: "100%", height: "100%", objectFit: "cover" };
+const addBtn = { background: "#5dbb91", color: "#fff", border: "none", padding: "12px", borderRadius: "10px", fontWeight: "800", cursor: "pointer", marginTop: "5px" };
 
-const actionsContainerStyle = { display: "flex", justifyContent: "center", gap: "5px" };
-const editButtonStyle = { background: "#f1f5f9", color: "#475569", border: "none", padding: "6px 12px", borderRadius: "8px", cursor: "pointer", fontWeight: "600" };
-const deleteButtonStyle = { background: "#fee2e2", color: "#ef4444", border: "none", padding: "6px 12px", borderRadius: "8px", cursor: "pointer", fontWeight: "600" };
-const saveButtonStyle = { background: "#10b981", color: "#fff", border: "none", padding: "6px 12px", borderRadius: "8px", cursor: "pointer", fontWeight: "600" };
-const cancelButtonStyle = { background: "#64748b", color: "#fff", border: "none", padding: "6px 12px", borderRadius: "8px", cursor: "pointer", fontWeight: "600" };
-const inlineInputStyle = { padding: "5px", borderRadius: "5px", border: "1px solid #10b981", width: "100%" };
+// Catalog Section
+const catalogContainer = { flex: 1, display: "flex", flexDirection: "column", overflow: "hidden" };
+const catalogHeaderCard = { 
+  background: "#fff", 
+  padding: "12px 20px", 
+  borderRadius: "15px 15px 0 0", 
+  border: "1px solid #f1f5f9", 
+  borderBottom: "none",
+  boxShadow: "0 2px 10px rgba(0,0,0,0.02)"
+};
+const sectionTitle = { fontSize: "1.1rem", fontWeight: "800", color: "#0f172a", margin: 0 };
 
-const previewWrapperStyle = { marginTop: "15px" };
-const imagePreviewStyle = { width: "80px", height: "80px", borderRadius: "10px", objectFit: "cover" };
+const catalogBody = { 
+  flex: 1, 
+  background: "rgba(255, 255, 255, 0.5)", 
+  padding: "20px", 
+  borderRadius: "0 0 15px 15px", 
+  border: "1px solid #f1f5f9", 
+  overflowY: "auto" 
+};
+const cardGrid = { display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(180px, 1fr))", gap: "15px" };
 
-const modalOverlayStyle = { position: "fixed", top: 0, left: 0, width: "100%", height: "100%", background: "rgba(0,0,0,0.5)", display: "flex", justifyContent: "center", alignItems: "center", zIndex: 1000 };
-const modalContentStyle = { background: "#fff", padding: "30px", borderRadius: "15px", textAlign: "center", minWidth: "300px" };
-const confirmBtnStyle = { padding: "10px 20px", background: "#10b981", color: "#fff", border: "none", borderRadius: "8px", cursor: "pointer", fontWeight: "700" };
-const cancelBtnStyle = { padding: "10px 20px", background: "#f1f5f9", color: "#475569", border: "none", borderRadius: "8px", cursor: "pointer", fontWeight: "700" };
+// Product Cards
+const productCard = { background: "#fff", borderRadius: "18px", padding: "12px", border: "1px solid #f1f5f9", position: "relative", boxShadow: "0 2px 8px rgba(0,0,0,0.04)" };
+const lowStockTag = { position: "absolute", top: "10px", left: "10px", background: "#ef4444", color: "#fff", fontSize: "8px", fontWeight: "900", padding: "3px 8px", borderRadius: "6px", display: "flex", alignItems: "center", gap: "3px", zIndex: 5 };
+const cardActions = { position: "absolute", top: "10px", right: "10px", display: "flex", gap: "5px", zIndex: 5 };
+const iconBtn = { background: "#fff", border: "1px solid #f1f5f9", width: "24px", height: "24px", borderRadius: "6px", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", color: "#27ae60" };
+const deleteIconBtn = { ...iconBtn, color: "#ef4444" };
+
+const imgContainer = { width: "100%", height: "110px", borderRadius: "12px", background: "#f8fafc", marginBottom: "10px", overflow: "hidden" };
+const cardImg = { width: "100%", height: "100%", objectFit: "contain" };
+
+const cardBody = { display: "flex", flexDirection: "column", gap: "8px" };
+const pName = { fontSize: "14px", fontWeight: "800", color: "#0f172a", margin: 0 };
+const pMeta = { display: "flex", justifyContent: "space-between" };
+const metaCol = { display: "flex", flexDirection: "column" };
+const metaLabel = { fontSize: "8px", fontWeight: "800", color: "#94a3b8" };
+const metaVal = { fontSize: "13px", fontWeight: "900", color: "#0f172a" };
+
+// Modals
+const modalOverlay = { position: "fixed", inset: 0, background: "rgba(15, 23, 42, 0.4)", backdropFilter: "blur(4px)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1000 };
+const modalBox = { background: "#fff", padding: "30px", borderRadius: "20px", textAlign: "center", width: "320px" };
+const confirmBtn = { background: "#5dbb91", color: "#fff", border: "none", padding: "10px 20px", borderRadius: "10px", fontWeight: "700", cursor: "pointer" };
+const cancelBtn = { background: "#f1f5f9", color: "#64748b", border: "none", padding: "10px 20px", borderRadius: "10px", fontWeight: "700", cursor: "pointer" };
 
 export default StockPage;
