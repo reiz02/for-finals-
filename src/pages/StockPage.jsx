@@ -88,26 +88,45 @@ function StockPage() {
       return;
     }
 
+    const normalizedKey = (category || name).trim().toLowerCase();
+    const existingProduct = products.find((p) => {
+      const existingName = String(p.name || p.category || "").trim().toLowerCase();
+      return existingName === normalizedKey;
+    });
+
+    const existingStock = Number(existingProduct?.stock || 0);
+    const newStock = existingProduct
+      ? existingStock + Number(stock || 0)
+      : Number(stock || 0);
+
     const formData = new FormData();
-  // Treat product name as the chosen category for inventory
-  formData.append("name", category || name);
-  formData.append("category", category || name);
+    formData.append("name", category || name);
+    formData.append("category", category || name);
     formData.append("price", price);
-    formData.append("stock", stock);
+    formData.append("stock", String(newStock));
     formData.append("createdAt", new Date().toISOString()); // ✅ ADDED TIMESTAMP
     if (image) formData.append("image", image);  // Add image if present
 
     try {
-      const res = await fetch("http://localhost:5000/api/products", {
-        method: "POST",
+      const endpoint = existingProduct
+        ? `http://localhost:5000/api/products/${existingProduct._id}`
+        : "http://localhost:5000/api/products";
+      const method = existingProduct ? "PUT" : "POST";
+
+      const res = await fetch(endpoint, {
+        method,
         headers: { "userid": user?.id },
         body: formData,
       });
+
       if (res.ok) {
-        setName(""); setPrice(""); setStock(""); setImage(null); setPreview(""); // Clear the form after adding
+        setName(""); setPrice(""); setStock(""); setImage(null); setPreview("");
+        setEditingProduct(null);
         fetchProducts();
       }
-    } catch (error) { console.error(error); }
+    } catch (error) {
+      console.error(error);
+    }
   };
 
   const updateProduct = async (id) => {
@@ -431,10 +450,10 @@ const mainLayout = { display: "flex", gap: "20px", flex: 1, overflow: "hidden" }
 const formSection = { width: "280px", background: "#fff", borderRadius: "20px", border: "1px solid #f1f5f9", height: "fit-content", boxShadow: "0 4px 15px rgba(0,0,0,0.03)" };
 const formHeader = { background: "#5dbb91", color: "#fff", padding: "15px 20px", borderTopLeftRadius: "20px", borderTopRightRadius: "20px", fontWeight: "800", fontSize: "0.9rem", display: "flex", alignItems: "center", gap: "8px" };
 const formBody = { padding: "20px", display: "flex", flexDirection: "column", gap: "15px" };
-const inputGroup = { display: "flex", flexDirection: "column", gap: "5px" };
+const inputGroup = { display: "flex", flexDirection: "column", gap: "5px", minWidth: 0, width: "100%" };
 const labelStyle = { fontSize: "10px", fontWeight: "900", color: "#94a3b8", letterSpacing: "0.5px" };
-const inputStyle = { padding: "10px", borderRadius: "10px", border: "1px solid #f1f5f9", background: "#f8fafc", fontSize: "13px", outline: "none" };
-const rowInput = { display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px" };
+const inputStyle = { width: "100%", padding: "10px", borderRadius: "10px", border: "1px solid #f1f5f9", background: "#f8fafc", fontSize: "13px", outline: "none", boxSizing: "border-box" };
+const rowInput = { display: "grid", gridTemplateColumns: "repeat(2, minmax(0, 1fr))", gap: "10px", minWidth: 0, width: "100%" };
 const uploadBox = { height: "90px", border: "2px dashed #e2e8f0", borderRadius: "12px", background: "#f8fafc", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", overflow: "hidden" };
 const previewImg = { width: "100%", height: "100%", objectFit: "cover" };
 const addBtn = { background: "#5dbb91", color: "#fff", border: "none", padding: "12px", borderRadius: "10px", fontWeight: "800", cursor: "pointer", marginTop: "5px" };
@@ -457,12 +476,13 @@ const catalogBody = {
   padding: "20px", 
   borderRadius: "0 0 15px 15px", 
   border: "1px solid #f1f5f9", 
-  overflowY: "auto" 
+  overflowY: "auto",
+  overflowX: "hidden"
 };
-const cardGrid = { display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(180px, 1fr))", gap: "15px" };
+const cardGrid = { display: "grid", gridTemplateColumns: "repeat(5, minmax(0, 1fr))", gap: "15px", width: "100%" };
 
 // Product Cards
-const productCard = { background: "#fff", borderRadius: "18px", padding: "12px", border: "1px solid #f1f5f9", position: "relative", boxShadow: "0 2px 8px rgba(0,0,0,0.04)" };
+const productCard = { background: "#fff", borderRadius: "18px", padding: "12px", border: "1px solid #f1f5f9", position: "relative", boxShadow: "0 2px 8px rgba(0,0,0,0.04)", minWidth: 0 };
 const lowStockTag = { position: "absolute", top: "10px", left: "10px", background: "#ef4444", color: "#fff", fontSize: "8px", fontWeight: "900", padding: "3px 8px", borderRadius: "6px", display: "flex", alignItems: "center", gap: "3px", zIndex: 5 };
 
 
