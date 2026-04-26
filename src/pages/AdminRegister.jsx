@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { Eye, EyeOff, Lock, ShieldCheck, Info } from "lucide-react";
 import "./adminRegister.css";
 
 function AdminRegister() {
@@ -28,6 +27,8 @@ function AdminRegister() {
   const [verificationCode, setVerificationCode] = useState("");
   const [showCodePopup, setShowCodePopup] = useState(false);
   const [dialog, setDialog] = useState({ show: false, title: "", message: "" });
+  const [resendDisabled, setResendDisabled] = useState(false);
+  const [resendTimer, setResendTimer] = useState(0);
 
   const navigate = useNavigate();
 
@@ -53,6 +54,39 @@ function AdminRegister() {
     }
   };
 
+  // Resend verification code with a small cooldown to prevent spam
+  const resendVerificationCode = async () => {
+    if (resendDisabled) return;
+    setResendDisabled(true);
+    setResendTimer(30);
+    const countdown = setInterval(() => {
+      setResendTimer(t => {
+        if (t <= 1) {
+          clearInterval(countdown);
+          setResendDisabled(false);
+          return 0;
+        }
+        return t - 1;
+      });
+    }, 1000);
+
+    try {
+      const response = await fetch("http://localhost:5000/api/send-code", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: email.trim().toLowerCase() }),
+      });
+      if (response.ok) {
+        setDialog({ show: true, title: "Verification", message: "A new 6-digit code has been sent to your email." });
+      } else {
+        const data = await response.json().catch(() => ({}));
+        setDialog({ show: true, title: "Error", message: data.error || "Failed to resend verification code." });
+      }
+    } catch (err) {
+      setDialog({ show: true, title: "Error", message: "Server connection failed. Check your network." });
+    }
+  };
+
   // ==========================================
   // 3. SIDE EFFECTS
   // ==========================================
@@ -75,68 +109,73 @@ function AdminRegister() {
   // 4. STEP 1: SPECIFIC VALIDATION
   // ==========================================
   const handleAdminSubmit = async (e) => {
-    e.preventDefault();
-    const newErrors = {};
+  e.preventDefault();
+  const newErrors = {};
 
-    // Validation Rules
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).{8,}$/;
+  // Validation Rules
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).{8,}$/;
+  
+  // Special character validation regex
+  const specialCharRegex = /[!@#$%^&*(),.?":{}|<>]/;
 
-    // Field-specific checks
-    if (!firstName.trim()) {
-      newErrors.firstName = "First name is required.";
-    } else if (firstName.trim().length < 2) {
-      newErrors.firstName = "First name must be at least 2 characters.";
+  // Field-specific checks
+  if (!firstName.trim()) {
+    newErrors.firstName = "First name is required.";
+  } else if (firstName.trim().length < 2) {
+    newErrors.firstName = "First name must be at least 2 characters.";
+  }
+
+  if (!lastName.trim()) {
+    newErrors.lastName = "Last name is required.";
+  }
+
+  if (!email.trim()) {
+    newErrors.email = "Email address is required.";
+  } else if (!emailRegex.test(email.trim())) {
+    newErrors.email = "Please enter a valid email format (e.g., name@example.com).";
+  }
+
+  if (!password) {
+    newErrors.password = "Password is required.";
+  } else if (!passwordRegex.test(password)) {
+    newErrors.password = "Password must have at least 8 characters, 1 uppercase letter, and 1 number.";
+  } else if (!specialCharRegex.test(password)) {  // Check for special characters
+    newErrors.password = "Password must contain at least one special character.";
+  }
+
+  if (!confirmPassword) {
+    newErrors.confirmPassword = "Please confirm your password.";
+  } else if (password !== confirmPassword) {
+    newErrors.confirmPassword = "Passwords do not match. Please try again.";
+  }
+
+  if (Object.keys(newErrors).length > 0) {
+    setErrors(newErrors);
+    return;
+  }
+
+  setLoading(true);
+  try {
+    const response = await fetch("http://localhost:5000/api/send-code", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email: email.trim().toLowerCase() }),
+    });
+
+    if (response.ok) {
+      setShowCodePopup(true);
+      setDialog({ show: true, title: "Verification", message: "A 6-digit code has been sent to your email." });
+    } else {
+      const data = await response.json();
+      setDialog({ show: true, title: "Error", message: data.error || "Failed to send verification code." });
     }
-
-    if (!lastName.trim()) {
-      newErrors.lastName = "Last name is required.";
-    }
-
-    if (!email.trim()) {
-      newErrors.email = "Email address is required.";
-    } else if (!emailRegex.test(email.trim())) {
-      newErrors.email = "Please enter a valid email format (e.g., name@example.com).";
-    }
-
-    if (!password) {
-      newErrors.password = "Password is required.";
-    } else if (!passwordRegex.test(password)) {
-      newErrors.password = "Must have 8+ chars, 1 uppercase, and 1 number.";
-    }
-
-    if (!confirmPassword) {
-      newErrors.confirmPassword = "Please confirm your password.";
-    } else if (password !== confirmPassword) {
-      newErrors.confirmPassword = "Passwords do not match. Please try again.";
-    }
-
-    if (Object.keys(newErrors).length > 0) {
-      setErrors(newErrors);
-      return;
-    }
-
-    setLoading(true);
-    try {
-      const response = await fetch("http://localhost:5000/api/send-code", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email: email.trim().toLowerCase() }),
-      });
-
-      if (response.ok) {
-        setShowCodePopup(true);
-        setDialog({ show: true, title: "Verification", message: "A 6-digit code has been sent to your email." });
-      } else {
-        const data = await response.json();
-        setDialog({ show: true, title: "Error", message: data.error || "Failed to send verification code." });
-      }
-    } catch (err) {
-      setDialog({ show: true, title: "Error", message: "Server connection failed. Check your network." });
-    } finally {
-      setLoading(false);
-    }
-  };
+  } catch (err) {
+    setDialog({ show: true, title: "Error", message: "Server connection failed. Check your network." });
+  } finally {
+    setLoading(false);
+  }
+};
 
   // ==========================================
   // 5. STEP 2: VERIFY
@@ -182,7 +221,6 @@ function AdminRegister() {
     return (
       <div className="admin-setup-container">
         <div className="admin-card">
-          <Lock size={60} color="#ef4444" style={{ marginBottom: "20px" }} />
           <h2>Registration Locked</h2>
           <p>An Administrator account already exists for this system.</p>
           <button onClick={() => navigate("/")} className="admin-btn">Back to Login</button>
@@ -194,12 +232,10 @@ function AdminRegister() {
   return (
     <div className="admin-setup-container">
       <div className="admin-card">
-        <ShieldCheck size={40} color="#1d3a2a" style={{ marginBottom: "10px" }} />
         <h2>Admin Registration</h2>
         <p>Set up your System Administrator account</p>
 
         <div className="validation-info">
-          <Info size={18} color="#1d3a2a" />
           <span>Inputs are case-formatted. Security requires a strong password to protect farm data.</span>
         </div>
 
@@ -267,7 +303,7 @@ function AdminRegister() {
                 }} 
               />
               <span onClick={() => setShowPassword(!showPassword)} className="eye-icon">
-                {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+                
               </span>
             </div>
             {errors.password && <span className="error-message">{errors.password}</span>}
@@ -287,7 +323,6 @@ function AdminRegister() {
                 }} 
               />
               <span onClick={() => setShowConfirmPassword(!showConfirmPassword)} className="eye-icon">
-                {showConfirmPassword ? <EyeOff size={20} /> : <Eye size={20} />}
               </span>
             </div>
             {errors.confirmPassword && <span className="error-message">{errors.confirmPassword}</span>}
@@ -324,8 +359,20 @@ function AdminRegister() {
               onChange={(e) => setVerificationCode(e.target.value)} 
             />
             <div className="popup-buttons">
-              <button onClick={verifyAndRegisterAdmin} className="admin-btn">Verify</button>
-              <button onClick={() => setShowCodePopup(false)} className="admin-btn cancel-btn">Cancel</button>
+                <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                  <button onClick={verifyAndRegisterAdmin} className="admin-btn">Verify</button>
+                  <button onClick={() => setShowCodePopup(false)} className="admin-btn cancel-btn">Cancel</button>
+                </div>
+                <div style={{ marginTop: 10, display: 'flex', gap: 8, alignItems: 'center' }}>
+                  <button
+                    onClick={resendVerificationCode}
+                    className="admin-btn"
+                    disabled={resendDisabled}
+                    style={{ backgroundColor: resendDisabled ? '#cbd5e1' : undefined }}
+                  >
+                    {resendDisabled ? `Resend (${resendTimer}s)` : 'Resend Code'}
+                  </button>
+                </div>
             </div>
           </div>
         </div>

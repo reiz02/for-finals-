@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState, useRef } from "react";
 import { BrowserRouter, Routes, Route, Navigate, Link, useNavigate, useLocation } from "react-router-dom";
 import { 
   FaBoxes, 
@@ -56,6 +56,23 @@ const Layout = ({ children }) => {
   const navigate = useNavigate();
   const location = useLocation();
   const user = JSON.parse(localStorage.getItem("user"));
+  const fileInputRef = useRef(null);
+  const [profileImage, setProfileImage] = useState(user?.profileImage || user?.image || "");
+
+  const handleProfileImageClick = () => {
+    fileInputRef.current?.click();
+  };
+
+  const handleProfileImageChange = (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      setProfileImage(event.target.result);
+    };
+    reader.readAsDataURL(file);
+  };
 
   const isAuthPage = ["/login", "/", "/register", "/register-admin", "/forgot-password"].includes(location.pathname);
 
@@ -116,12 +133,29 @@ const Layout = ({ children }) => {
       <div className="main-content">
         <header className="header">
           <div className="user-profile-header">
-            {/* User Icon Based on Role */}
-            <div className="header-avatar-box">
-              {userRole === "admin" ? 
-                <FaUserShield className="header-icon admin-theme" /> : 
+            {/* User Icon / Uploadable Profile Image */}
+            <div
+              className="header-avatar-box"
+              onClick={handleProfileImageClick}
+              role="button"
+              tabIndex={0}
+              onKeyDown={(e) => { if (e.key === "Enter") handleProfileImageClick(); }}
+              aria-label="Upload profile photo"
+            >
+              {profileImage ? (
+                <img src={profileImage} alt="Profile" />
+              ) : userRole === "admin" ? (
+                <FaUserShield className="header-icon admin-theme" />
+              ) : (
                 <FaUserCircle className="header-icon employee-theme" />
-              }
+              )}
+              <input
+                type="file"
+                accept="image/*"
+                ref={fileInputRef}
+                style={{ display: "none" }}
+                onChange={handleProfileImageChange}
+              />
             </div>
 
             {/* Information Section: Name, Role, Email */}

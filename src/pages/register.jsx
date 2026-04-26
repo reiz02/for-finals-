@@ -1,6 +1,5 @@
 import React, { useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
-import { Eye, EyeOff } from "lucide-react"; 
+import { Link, useNavigate } from "react-router-dom"; 
 import "./register.css";
 
 function Register() {
@@ -37,66 +36,78 @@ function Register() {
 
   // --- STEP 1: REQUEST VERIFICATION CODE ---
   const handleSubmit = async (e) => {
-    e.preventDefault();
+  e.preventDefault();
 
-    if (!firstName || !lastName || !email || !password || !confirmPassword || !section) {
+  if (!firstName || !lastName || !email || !password || !confirmPassword || !section) {
+    setDialog({
+      show: true,
+      title: "Error",
+      message: "Please fill out all required fields.",
+      type: "error"
+    });
+    return;
+  }
+
+  if (password !== confirmPassword) {
+    setDialog({
+      show: true,
+      title: "Error",
+      message: "Passwords do not match!",
+      type: "error"
+    });
+    return;
+  }
+
+  // Special character validation
+  const specialCharRegex = /[!@#$%^&*(),.?":{}|<>]/;
+  if (!specialCharRegex.test(password)) {
+    setDialog({
+      show: true,
+      title: "Error",
+      message: "Password must contain at least one special character.",
+      type: "error"
+    });
+    return;
+  }
+
+  setLoading(true);
+
+  try {
+    const response = await fetch("http://localhost:5000/api/send-code", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email: email.trim().toLowerCase() })
+    });
+
+    const data = await response.json();
+
+    if (response.ok) {
+      setShowCodePopup(true);
+      setDialog({
+        show: true,
+        title: "Verification Sent",
+        message: "A verification code has been sent to your email.",
+        type: "success"
+      });
+    } else {
       setDialog({
         show: true,
         title: "Error",
-        message: "Please fill out all required fields.",
+        message: data.error || "Failed to send verification code.",
         type: "error"
       });
-      return;
     }
-
-    if (password !== confirmPassword) {
-      setDialog({
-        show: true,
-        title: "Error",
-        message: "Passwords do not match!",
-        type: "error"
-      });
-      return;
-    }
-
-    setLoading(true);
-
-    try {
-      const response = await fetch("http://localhost:5000/api/send-code", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email: email.trim().toLowerCase() })
-      });
-
-      const data = await response.json();
-
-      if (response.ok) {
-        setShowCodePopup(true);
-        setDialog({
-          show: true,
-          title: "Verification Sent",
-          message: "A verification code has been sent to your email.",
-          type: "success"
-        });
-      } else {
-        setDialog({
-          show: true,
-          title: "Error",
-          message: data.error || "Failed to send verification code.",
-          type: "error"
-        });
-      }
-    } catch (err) {
-      setDialog({
-        show: true,
-        title: "Server Error",
-        message: "Could not connect to the server.",
-        type: "error"
-      });
-    } finally {
-      setLoading(false);
-    }
-  };
+  } catch (err) {
+    setDialog({
+      show: true,
+      title: "Server Error",
+      message: "Could not connect to the server.",
+      type: "error"
+    });
+  } finally {
+    setLoading(false);
+  }
+};
 
   // --- RESEND OTP LOGIC ---
   const handleResendCode = async () => {
@@ -257,7 +268,6 @@ function Register() {
                 className="eye-icon-trigger"
                 onClick={() => setShowPassword(!showPassword)}
               >
-                {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
               </button>
             </div>
           </div>
@@ -277,7 +287,7 @@ function Register() {
                 className="eye-icon-trigger"
                 onClick={() => setShowConfirmPassword(!showConfirmPassword)}
               >
-                {showConfirmPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+      
               </button>
             </div>
           </div>

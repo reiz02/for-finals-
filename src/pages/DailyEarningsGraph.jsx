@@ -4,24 +4,40 @@ import {
   ResponsiveContainer 
 } from "recharts";
 
-const DailyEarningsGraph = ({ data, mintColor }) => {
+const DailyEarningsGraph = ({ data, mintColor, selectedYear }) => {
   
   const processData = (rawData) => {
-    const dailyMap = {};
-    const sortedData = [...rawData].sort((a, b) => new Date(a.date) - new Date(b.date));
+  const dailyMap = {};
 
-    sortedData.forEach(item => {
-      if (item.type === "Income") {
-        const dateLabel = new Date(item.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-        dailyMap[dateLabel] = (dailyMap[dateLabel] || 0) + Number(item.amount);
-      }
+  const filtered = rawData.filter(item => {
+    const rawDate = item.date || item.createdAt;
+    const d = new Date(rawDate);
+    return !isNaN(d.getTime()) && d.getFullYear() === selectedYear;
+  });
+
+  const sortedData = filtered.sort((a, b) => new Date(a.date) - new Date(b.date));
+
+  sortedData.forEach(item => {
+    const rawDate = item.date || item.createdAt;
+    const d = new Date(rawDate);
+
+    const dateLabel = d.toLocaleDateString('en-US', {
+      month: 'short',
+      day: 'numeric'
     });
 
-    return Object.keys(dailyMap).map(date => ({
-      name: date,
-      earnings: dailyMap[date]
-    })).slice(-7); 
-  };
+    const amt = Number(item.amount) || 0;
+
+    if (!dailyMap[dateLabel]) dailyMap[dateLabel] = 0;
+
+    dailyMap[dateLabel] += item.type === 'Expense' ? -amt : amt;
+  });
+
+  return Object.keys(dailyMap).map(date => ({
+    name: date,
+    earnings: dailyMap[date]
+  })).slice(-7);
+};
 
   const chartData = processData(data);
 

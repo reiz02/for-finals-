@@ -295,3 +295,143 @@
     font-size: 32px;
   }
 }
+
+/* =========================================
+   🌿 FARM-THEMED FORGOT PASSWORD PAGE
+   ========================================= */
+
+.forgot-password-page {
+  min-height: 100vh;
+  width: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+
+  /* KEEPING YOUR ORIGINAL BACKGROUND IMAGE */
+  background: url("C:\Users\Charm Cabrera\Downloads\gh2.png") no-repeat center center/cover;
+  padding: 20px;
+  position: relative;
+}
+
+/* =========================================
+   🌱 FARM GLASS CARD ENHANCED STYLE
+   ========================================= */
+
+.forgot-password-page .register-container {
+  background: rgba(255, 255, 255, 0.92) !important;
+  border: 1px solid rgba(46, 125, 50, 0.25); /* subtle green border */
+  border-top: 5px solid #2e7d32; /* farm green accent */
+  box-shadow:
+    0 20px 40px rgba(0, 0, 0, 0.15),
+    0 0 0 1px rgba(76, 175, 80, 0.1); /* light green shadow */
+  border-radius: 30px;
+  backdrop-filter: blur(18px);
+  max-width: 500px;
+  width: 100%;
+  padding: 40px;
+  text-align: center;
+  z-index: 10;
+}
+
+/* =========================================
+   🌾 FARM TITLE STYLE (with Farm Green Text)
+   ========================================= */
+
+.forgot-password-page h2 {
+  color: #1b5e20 !important; /* deep green color */
+  font-weight: 900;
+  letter-spacing: 1px;
+  font-size: 28px;
+  text-transform: uppercase;
+  margin-bottom: 20px;
+}
+
+/* =========================================
+   🌿 FARM-STYLE INPUTS (Green Theme)
+   ========================================= */
+
+.forgot-password-page input {
+  border: 2px solid #c8e6c9 !important; /* subtle light green border */
+  background: #ffffff !important;
+  color: #1b5e20 !important;
+  transition: all 0.3s ease;
+  border-radius: 14px;
+  padding: 14px;
+  margin-bottom: 20px;
+}
+
+/* Focus effect on inputs */
+.forgot-password-page input:focus {
+  border-color: #2e7d32 !important; /* dark green focus */
+  box-shadow: 0 0 0 4px rgba(46, 125, 50, 0.15);
+}
+
+/* =========================================
+   🌳 FARM-INSPIRED BUTTON STYLE
+   ========================================= */
+
+.forgot-password-page button {
+  background: linear-gradient(135deg, #2e7d32, #1b5e20) !important;
+  color: #fff !important;
+  font-weight: 800;
+  border-radius: 14px;
+  transition: all 0.3s ease;
+  padding: 16px;
+  width: 100%;
+  cursor: pointer;
+  margin-top: 20px;
+}
+
+.forgot-password-page button:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 20px rgba(27, 94, 32, 0.3);
+}
+
+.forgot-password-page button:disabled {
+  background: #a5d6a7 !important;
+  cursor: not-allowed;
+}
+
+/* =========================================
+   🌾 DIALOG BOX (FOR ERRORS/SUCCESS)
+   ========================================= */
+
+.dialog-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(8px);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 9999;
+}
+
+.dialog-box {
+  background: #ffffff;
+  padding: 40px;
+  border-radius: 24px;
+  width: 90%;
+  max-width: 400px;
+  text-align: center;
+  box-shadow: 0 25px 50px rgba(0, 0, 0, 0.3);
+}
+
+/* =========================================
+   🌿 MOBILE RESPONSIVENESS (Ensure readability)
+   ========================================= */
+
+@media (max-width: 600px) {
+  .forgot-password-page .register-container {
+    padding: 30px 20px;
+    max-height: 95vh;
+  }
+
+  .forgot-password-page h2 {
+    font-size: 24px;
+  }
+
+  .forgot-password-page button {
+    padding: 14px;
+  }
+}

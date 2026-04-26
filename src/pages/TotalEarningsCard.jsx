@@ -20,7 +20,8 @@ function TotalEarningsCard() {
           return itemDate.getMonth() === currentMonth && itemDate.getFullYear() === currentYear;
         })
         .reduce((sum, item) => {
-          return item.type === "Expense" ? sum - item.amount : sum + item.amount;
+          const amt = Number(item.amount) || 0;
+          return item.type === "Expense" ? sum - amt : sum + amt;
         }, 0);
 
       setTotal(monthNet);
@@ -28,7 +29,6 @@ function TotalEarningsCard() {
       console.error("Total earnings fetch error:", err);
     }
   };
-
   useEffect(() => {
     fetchTotal();
   }, []);
