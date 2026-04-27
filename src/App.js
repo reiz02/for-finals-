@@ -1,4 +1,4 @@
-import React, { useState, useRef } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import { BrowserRouter, Routes, Route, Navigate, Link, useNavigate, useLocation } from "react-router-dom";
 import { 
   FaBoxes, 
@@ -7,7 +7,8 @@ import {
   FaUserCircle, 
   FaChartLine, 
   FaHistory, 
-  FaUsersCog 
+  FaUsersCog,
+  FaCalendarAlt
 } from "react-icons/fa";
 
 // === Pages Imports ===
@@ -58,6 +59,12 @@ const Layout = ({ children }) => {
   const user = JSON.parse(localStorage.getItem("user"));
   const fileInputRef = useRef(null);
   const [profileImage, setProfileImage] = useState(user?.profileImage || user?.image || "");
+  const [currentTime, setCurrentTime] = useState(new Date());
+
+  useEffect(() => {
+    const timer = setInterval(() => setCurrentTime(new Date()), 1000);
+    return () => clearInterval(timer);
+  }, []);
 
   const handleProfileImageClick = () => {
     fileInputRef.current?.click();
@@ -170,6 +177,15 @@ const Layout = ({ children }) => {
                 <span className="header-email-text">{user.email}</span>
               </div>
             </div>
+          </div>
+
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', color: '#1a1a1a', fontSize: '12px', fontWeight: '600', whiteSpace: 'nowrap', textShadow: '0 1px 3px rgba(255, 255, 255, 0.4)' }}>
+            <FaCalendarAlt style={{ color: '#2d3436' }} />
+            <span>{currentTime.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</span>
+            <span style={{ color: 'rgba(45, 52, 54, 0.4)' }}>|</span>
+            <span style={{ color: '#1a1a1a', fontWeight: 'bold' }}>
+              {currentTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+            </span>
           </div>
         </header>
         

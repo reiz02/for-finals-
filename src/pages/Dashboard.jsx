@@ -158,7 +158,7 @@ function Dashboard() {
       {/* HEADER SECTION */}
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "15px", gap: "15px" }}>
         {/* TITLE CARD */}
-        <div style={{ backgroundColor: lightGreenBg, padding: "15px 25px", borderRadius: "14px", boxShadow: softShadow, border: `1px solid #d3f9e8`, flex: "1", minWidth: "300px" }}>
+        <div style={{ backgroundColor: lightGreenBg, padding: "15px 25px", borderRadius: "14px", boxShadow: softShadow, border: `1px solid #d3f9e8`, width: "100%" }}>
           <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
             <FaChartLine style={{ color: activeMint, fontSize: "20px" }} />
             <h2 style={{ margin: 0, fontSize: "20px", fontWeight: "900", color: "#1e293b", letterSpacing: "-0.5px" }}>
@@ -168,16 +168,6 @@ function Dashboard() {
           <p style={{ margin: "4px 0 0 0", fontSize: "13px", color: "#475569", fontWeight: "500", lineHeight: "1.4" }}>
             Monitor your daily performance and overall financial health. Use the data below to track trends and optimize operations.
           </p>
-        </div>
-
-        {/* STATUS BAR */}
-        <div style={{ display: "flex", alignItems: "center", gap: "10px", backgroundColor: "#fff", padding: "12px 20px", borderRadius: "12px", boxShadow: softShadow, border: "1px solid #f1f5f9", color: "#64748b", fontWeight: "600", fontSize: "12px", whiteSpace: "nowrap" }}>
-          <FaCalendarAlt style={{ color: activeMint }} /> 
-          {currentTime.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })} 
-          <span style={{ color: "#cbd5e1" }}>|</span>
-          <span style={{ color: "#1e293b", fontWeight: "bold" }}>
-            {currentTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-          </span>
         </div>
       </div>
 
