@@ -8,7 +8,8 @@ import {
   FaChartLine, 
   FaHistory, 
   FaUsersCog,
-  FaCalendarAlt
+  FaCalendarAlt,
+  FaClipboardList
 } from "react-icons/fa";
 
 // === Pages Imports ===
@@ -21,6 +22,7 @@ import DailyEarnings from "./pages/DailyEarnings";
 import ForgotPassword from "./pages/ForgotPassword";
 import ReportsPage from "./pages/ReportsPage";
 import EmployeePage from "./pages/EmployeePage";
+import AuditLogPage from "./pages/AuditLogPage";
 
 import "./App.css";
 import farmerBg from "./assets/gh2.png"; 
@@ -127,6 +129,13 @@ const Layout = ({ children }) => {
           {(userRole === "admin" || userSection === "finance") && (
             <Link to="/reports" className={location.pathname === "/reports" ? "active" : ""}>
               <FaHistory /> Reports
+            </Link>
+          )}
+
+          {/* Audit Logs: Admin Only */}
+          {userRole === "admin" && (
+            <Link to="/audit-logs" className={location.pathname === "/audit-logs" ? "active" : ""}>
+              <FaClipboardList /> Audit Logs
             </Link>
           )}
         </nav>
@@ -244,6 +253,13 @@ function App() {
             <Route path="/reports" element={
               <ProtectedRoute allowedRoles={["admin", "employee"]} requiredSection="Finance">
                 <ReportsPage />
+              </ProtectedRoute>
+            } />
+
+            {/* Audit Logs */}
+            <Route path="/audit-logs" element={
+              <ProtectedRoute allowedRoles={["admin"]}>
+                <AuditLogPage />
               </ProtectedRoute>
             } />
 

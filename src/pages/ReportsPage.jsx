@@ -1,10 +1,11 @@
 import React, { useEffect, useState, useCallback } from "react";
 import { 
-  FaTrash, FaPlus, FaHistory, FaCheckCircle, 
+  FaTrash, FaPlus, FaHistory, 
   FaSearch, FaFilePdf, FaEdit, FaTimes, FaFileInvoiceDollar 
 } from "react-icons/fa";
 import jsPDF from "jspdf"; 
 import autoTable from "jspdf-autotable";
+import ConfirmationModal from "../components/ConfirmationModal";
 
 const ReportsPage = () => {
   const [amount, setAmount] = useState("");
@@ -30,9 +31,16 @@ const ReportsPage = () => {
 
   const [submissions, setSubmissions] = useState([]);
   const [filteredSubmissions, setFilteredSubmissions] = useState([]);
-  const [showSuccessDialog, setShowSuccessDialog] = useState(false);
   // Generic dialog for validations and confirmations
   const [dialog, setDialog] = useState({ show: false, message: "", type: "info", onConfirm: null, onCancel: null });
+  // ✅ NEW: Submission confirmation modal
+  const [submitConfirmation, setSubmitConfirmation] = useState({ show: false, isLoading: false, summary: "" });
+  // ✅ NEW: Success message with auto-dismiss
+  const [successMessage, setSuccessMessage] = useState({ show: false, message: "" });
+  // ✅ NEW: Delete confirmation modal using ConfirmationModal component
+  const [deleteConfirmation, setDeleteConfirmation] = useState({ show: false, isLoading: false, recordId: null });
+  // ✅ NEW: Success message for delete/edit operations
+  const [operationMessage, setOperationMessage] = useState({ show: false, message: "", type: "success" });
 
   const [editingItem, setEditingItem] = useState(null);
   const [editForm, setEditForm] = useState({ date: "", description: "", type: "Income", amount: "" });
@@ -41,6 +49,7 @@ const ReportsPage = () => {
   const [selectedDate, setSelectedDate] = useState(today);
 
   const [quantity, setQuantity] = useState("");
+  const [isFormValid, setIsFormValid] = useState(false);
 
   const user = JSON.parse(localStorage.getItem("user") || "{}");
   const displayName = user.firstName || user.name || "User";
@@ -104,14 +113,19 @@ const ReportsPage = () => {
     fetchSubmissions();
   }, [fetchSubmissions]);
 
-  // ensure default description/category when switching to Income
   useEffect(() => {
-    if (type === 'Income' && !description && categories.length) {
-      setDescription(categories[0]);
-    }
-    // only run when `type` changes or when description is empty
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [type]);
+    const isValid = (() => {
+      if (!amount || !selectedDate || !description) return false;
+      if (type === "Income") {
+        return quantity && unit;
+      }
+      return true;
+    })();
+    setIsFormValid(isValid);
+  }, [amount, selectedDate, description, quantity, unit, type]);
+
+  // ensure default description/category when switching to Income
+  // Removed auto-setting to keep 'Select Category' as default
 
 useEffect(() => {
   const current = new Date().getFullYear();
@@ -252,11 +266,70 @@ useEffect(() => {
       return;
     }
 
+    // ✅ NEW: Stock validation for Income submissions
+    if (isIncome) {
+      try {
+        const productsRes = await fetch("http://localhost:5000/api/products", {
+          method: "GET",
+          headers: {
+            "Content-Type": "application/json",
+            "userid": user._id || user.id || ""
+          }
+        });
+
+        if (productsRes.ok) {
+          const products = await productsRes.json();
+          const selectedProduct = products.find(p => p.category === description || p.name === description);
+
+          if (!selectedProduct || selectedProduct.stock === 0) {
+            setDialog({
+              show: true,
+              message: "Cannot record income. This item is out of stock.",
+              type: "alert",
+              onConfirm: () => setDialog(d => ({ ...d, show: false }))
+            });
+            return;
+          }
+        }
+      } catch (err) {
+        console.error("Error checking stock:", err);
+        // Continue anyway if stock check fails
+      }
+    }
+
+    // ✅ NEW: Build summary for confirmation modal
+    const summary = isIncome
+      ? `Submit Income report for ${qty} units of ${description}?`
+      : `Submit Expense of P${Number(amount).toLocaleString()}?`;
+
+    setSubmitConfirmation({
+      show: true,
+      isLoading: false,
+      summary: summary
+    });
+  };
+
+  // ✅ NEW: Actual submit function called from confirmation modal
+  const performSubmit = async () => {
+    const isIncome = type.trim().toLowerCase() === "income";
+    const qty = isIncome ? Number(quantity) : 0;
+
+    setSubmitConfirmation(prev => ({ ...prev, isLoading: true }));
+
     try {
+      const now = new Date();
+      const dateTimestamp = (() => {
+        if (selectedDate && /^\d{4}-\d{2}-\d{2}$/.test(selectedDate)) {
+          const [year, month] = selectedDate.split("-").map(Number); // eslint-disable-line no-unused-vars
+          return new Date(year, month - 1, now.getHours(), now.getMinutes(), now.getSeconds(), now.getMilliseconds()).toISOString();
+        }
+        return now.toISOString();
+      })();
+
       const payload = {
         // Treat `amount` input as price-per-unit for Income entries; store total = price * qty
         amount: isIncome ? Number(amount) * qty : Number(amount),
-        date: selectedDate,
+        date: dateTimestamp,
         // For Income entries we treat description as the selected category
         description: type.trim().toLowerCase() === 'income' ? (description || '') : description,
         type: type.trim(),
@@ -271,7 +344,10 @@ useEffect(() => {
 
       const response = await fetch("http://localhost:5000/api/earnings", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { 
+          "Content-Type": "application/json",
+          "userid": user._id || user.id || ""
+        },
         body: JSON.stringify(payload)
       });
 
@@ -282,40 +358,74 @@ useEffect(() => {
         setQuantity("");
 
         await fetchSubmissions();
-        setShowSuccessDialog(true);
-        setTimeout(() => setShowSuccessDialog(false), 3000);
+        
+        // ✅ NEW: Show success message with proper styling
+        setSuccessMessage({
+          show: true,
+          message: "Daily report added successfully!"
+        });
+        setTimeout(() => setSuccessMessage({ show: false, message: "" }), 3000);
+        
+        setSubmitConfirmation({ show: false, isLoading: false, summary: "" });
       }
     } catch (err) {
       console.error("Submit error:", err);
+      setSubmitConfirmation(prev => ({ ...prev, isLoading: false }));
     }
   };
 
   const deleteRecord = async (id) => {
-    // show confirm dialog; perform deletion in onConfirm
-    setDialog({
-      show: true,
-      message: "Are you sure you want to delete this record?",
-      type: "confirm",
-      onConfirm: async () => {
-        try {
-          const res = await fetch(`http://localhost:5000/api/earnings/${id}`, { method: "DELETE" });
-          if (res.ok) {
-            await fetchSubmissions();
-            try {
-              localStorage.setItem('earnings:updated', Date.now().toString());
-              window.dispatchEvent(new Event('earnings:updated'));
-            } catch (e) {}
-          } else {
-            console.error('Delete failed', res.statusText);
-          }
-        } catch (err) {
-          console.error("Delete error:", err);
-        } finally {
-          setDialog(d => ({ ...d, show: false }));
+    // Show ConfirmationModal for delete action
+    setDeleteConfirmation({ show: true, isLoading: false, recordId: id });
+  };
+
+  const confirmDelete = async () => {
+    const id = deleteConfirmation.recordId;
+    setDeleteConfirmation(prev => ({ ...prev, isLoading: true }));
+
+    try {
+      const res = await fetch(`http://localhost:5000/api/earnings/${id}`, {
+        method: "DELETE",
+        headers: {
+          "userid": user._id || user.id || ""
         }
-      },
-      onCancel: () => setDialog(d => ({ ...d, show: false }))
-    });
+      });
+      if (res.ok) {
+        await fetchSubmissions();
+        setDeleteConfirmation({ show: false, isLoading: false, recordId: null });
+        
+        // Show success message
+        setOperationMessage({
+          show: true,
+          message: "Report deleted successfully!",
+          type: "success"
+        });
+        setTimeout(() => setOperationMessage({ show: false, message: "", type: "success" }), 3000);
+
+        try {
+          localStorage.setItem('earnings:updated', Date.now().toString());
+          window.dispatchEvent(new Event('earnings:updated'));
+        } catch (e) {}
+      } else {
+        console.error('Delete failed', res.statusText);
+        setOperationMessage({
+          show: true,
+          message: "Failed to delete report. Please try again.",
+          type: "error"
+        });
+        setTimeout(() => setOperationMessage({ show: false, message: "", type: "success" }), 3000);
+      }
+    } catch (err) {
+      console.error("Delete error:", err);
+      setOperationMessage({
+        show: true,
+        message: "Error deleting report. Please try again.",
+        type: "error"
+      });
+      setTimeout(() => setOperationMessage({ show: false, message: "", type: "success" }), 3000);
+    } finally {
+      setDeleteConfirmation(prev => ({ ...prev, isLoading: false }));
+    }
   };
 
   const openEditModal = (item) => {
@@ -359,7 +469,10 @@ useEffect(() => {
         `http://localhost:5000/api/earnings/${editingItem}`,
         {
           method: "PUT",
-          headers: { "Content-Type": "application/json" },
+          headers: {
+            "Content-Type": "application/json",
+            "userid": user._id || user.id || ""
+          },
           body: JSON.stringify(payload)
         }
       );
@@ -367,11 +480,20 @@ useEffect(() => {
       if (response.ok) {
         await fetchSubmissions();
         setEditingItem(null);
+        setOperationMessage({ show: true, message: "Report updated successfully!", type: "success" });
+        setTimeout(() => setOperationMessage({ show: false, message: "", type: "success" }), 3000);
+      } else {
+        setOperationMessage({ show: true, message: "Failed to update report. Please try again.", type: "error" });
+        setTimeout(() => setOperationMessage({ show: false, message: "", type: "error" }), 3000);
       }
     } catch (err) {
       console.error("Update error:", err);
+      setOperationMessage({ show: true, message: "Error updating report. Please try again.", type: "error" });
+      setTimeout(() => setOperationMessage({ show: false, message: "", type: "error" }), 3000);
     }
   };
+
+
 
   const styles = {
     container: { padding: "20px", fontFamily: "'Inter', sans-serif", backgroundColor: "transparent", minHeight: "100vh" },
@@ -402,6 +524,7 @@ useEffect(() => {
     summaryBox: (borderColor) => ({ background: "#fff", padding: "20px", borderRadius: "12px", borderLeft: `6px solid ${borderColor}`, boxShadow: "0 2px 8px rgba(0,0,0,0.03)", flex: "1 1 200px" }),
     input: { padding: "10px", borderRadius: "8px", border: "1px solid #e2e8f0", width: "100%", marginBottom: "10px", backgroundColor: "#fff" },
     primaryBtn: (bgColor) => ({ background: bgColor, color: "white", border: "none", padding: "10px 20px", borderRadius: "8px", cursor: "pointer", fontWeight: "600", display: "flex", alignItems: "center", gap: "8px" }),
+    disabledBtn: { background: "#d1d5db", color: "#9ca3af", border: "none", padding: "10px 20px", borderRadius: "8px", cursor: "not-allowed", fontWeight: "600", display: "flex", alignItems: "center", gap: "8px" },
     tableContainer: { overflowX: "auto" },
     table: { width: "100%", borderCollapse: "collapse", minWidth: "800px" },
     th: { background: "#f8fafc", padding: "12px", borderBottom: "2px solid #edf2f7", color: "#64748b", fontSize: "0.8rem", textAlign: "left", textTransform: "uppercase" },
@@ -412,9 +535,68 @@ useEffect(() => {
 
   return (
     <div style={styles.container}>
-      {showSuccessDialog && (
-        <div style={{ position: "fixed", top: "20px", right: "20px", background: "#2d8a64", color: "white", padding: "15px 25px", borderRadius: "8px", zIndex: 2000 }}>
-          <FaCheckCircle /> Saved Successfully!
+      {/* ✅ SUCCESS MESSAGE - Matches Inventory/Employee design */}
+      {successMessage.show && (
+        <div style={{ position: "fixed", inset: 0, background: "rgba(15, 23, 42, 0.4)", backdropFilter: "blur(4px)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1200 }}>
+          <div style={{ background: "#dcfce7", padding: "30px", borderRadius: "20px", textAlign: "center", width: "320px", border: "2px solid #16a34a" }}>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "10px", marginBottom: "15px" }}>
+              <span style={{ fontSize: "24px" }}>✓</span>
+              <p style={{ fontWeight: "700", margin: 0, color: "#15803d", fontSize: "1.1rem" }}>{successMessage.message}</p>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ✅ SUBMISSION CONFIRMATION MODAL - Matches Inventory/Employee design */}
+      {submitConfirmation.show && (
+        <div style={{ position: "fixed", inset: 0, background: "rgba(15, 23, 42, 0.6)", backdropFilter: "blur(2px)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1100 }}>
+          <div style={{ background: "#ffffff", borderRadius: "16px", boxShadow: "0 20px 50px rgba(0, 0, 0, 0.15), 0 10px 20px rgba(0, 0, 0, 0.08)", width: "90%", maxWidth: "420px", padding: 0, overflow: "hidden" }}>
+            {/* Header */}
+            <div style={{ background: "linear-gradient(135deg, #57bc90 0%, #2d8a64 100%)", padding: "25px 20px", display: "flex", alignItems: "center", gap: "15px" }}>
+              <div style={{ width: "50px", height: "50px", borderRadius: "50%", background: "rgba(87, 188, 144, 0.25)", display: "flex", alignItems: "center", justifyContent: "center", color: "#ffffff", flexShrink: 0, border: "2px solid rgba(255, 255, 255, 0.4)" }}>
+                <span style={{ fontSize: "24px" }}>📋</span>
+              </div>
+              <h2 style={{ margin: 0, color: "#ffffff", fontSize: "1.25rem", fontWeight: "700", letterSpacing: "-0.5px" }}>Confirm Submission</h2>
+            </div>
+
+            {/* Body */}
+            <div style={{ padding: "25px 20px" }}>
+              <p style={{ margin: 0, marginBottom: "15px", color: "#334155", fontSize: "0.95rem", lineHeight: "1.6", fontWeight: "500" }}>{submitConfirmation.summary}</p>
+              <div style={{ background: "#f1f5f9", border: "1px solid #e2e8f0", borderRadius: "12px", padding: "18px 22px", display: "flex", flexDirection: "column", gap: "8px", marginTop: "15px" }}>
+                <span style={{ fontSize: "0.75rem", fontWeight: "700", textTransform: "uppercase", color: "#2b8a3e", letterSpacing: "0.5px" }}>Details:</span>
+                <span style={{ fontSize: "1.1rem", fontWeight: "700", color: "#0f172a" }}>
+                  {type === "Income"
+                    ? `${quantity} units × P${amount} = P${(Number(amount) * Number(quantity)).toLocaleString()}`
+                    : `Expense: P${Number(amount).toLocaleString()}`}
+                </span>
+              </div>
+            </div>
+
+            {/* Footer */}
+            <div style={{ display: "flex", gap: "14px", padding: "20px", borderTop: "1px solid #e2e8f0", background: "#f8fafc" }}>
+              <button
+                onClick={() => setSubmitConfirmation({ show: false, isLoading: false, summary: "" })}
+                disabled={submitConfirmation.isLoading}
+                style={{ flex: "1 1 50%", background: "#e2e8f0", color: "#475569", border: "1px solid #cbd5e1", borderRadius: "10px", fontWeight: "600", fontSize: "0.95rem", cursor: "pointer", padding: "11px 20px", minHeight: "44px", transition: "all 0.2s ease", opacity: submitConfirmation.isLoading ? 0.7 : 1 }}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={performSubmit}
+                disabled={submitConfirmation.isLoading}
+                style={{ flex: "1 1 50%", background: "#57bc90", color: "#ffffff", border: "1px solid transparent", borderRadius: "10px", fontWeight: "600", fontSize: "0.95rem", cursor: "pointer", padding: "11px 20px", minHeight: "44px", boxShadow: "0 4px 12px rgba(87, 188, 144, 0.2)", transition: "all 0.2s ease", opacity: submitConfirmation.isLoading ? 0.7 : 1 }}
+              >
+                {submitConfirmation.isLoading ? (
+                  <>
+                    <span style={{ display: "inline-block", width: "14px", height: "14px", border: "2px solid rgba(255, 255, 255, 0.3)", borderTopColor: "#ffffff", borderRadius: "50%", animation: "spin 0.6s linear infinite", marginRight: "8px" }}></span>
+                    Processing...
+                  </>
+                ) : (
+                  "Confirm"
+                )}
+              </button>
+            </div>
+          </div>
         </div>
       )}
 
@@ -485,7 +667,16 @@ useEffect(() => {
             {editForm.type === "Income" && (
               <input style={styles.input} type="number" value={editForm.quantity || ""} placeholder="Quantity" onChange={(e) => setEditForm({...editForm, quantity: e.target.value})} />
             )}
-            <input style={styles.input} type="number" value={editForm.amount} placeholder="Amount" onChange={(e) => setEditForm({...editForm, amount: e.target.value})} />
+            <div style={{ position: "relative" }}>
+              <span style={{ position: "absolute", left: "10px", top: "50%", transform: "translateY(-50%)", color: "#64748b", fontWeight: "600", pointerEvents: "none" }}>₱</span>
+              <input 
+                style={{ ...styles.input, paddingLeft: "30px" }} 
+                type="number" 
+                value={editForm.amount} 
+                placeholder="Amount (₱)" 
+                onChange={(e) => setEditForm({...editForm, amount: e.target.value})} 
+              />
+            </div>
             <div style={{display: "flex", gap: "10px"}}>
               <button onClick={handleUpdate} style={styles.primaryBtn("#4e73df")}>Update</button>
               <button onClick={() => setEditingItem(null)} style={styles.primaryBtn("#64748b")}>Cancel</button>
@@ -529,51 +720,71 @@ useEffect(() => {
       {/* Add Record Form - */}
       <div style={styles.card}>
         <h3 style={{marginBottom: "15px"}}><FaPlus /> Add Daily Report</h3>
-        <form onSubmit={handleSubmit} style={{display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))", gap: "10px"}}>
+        <form onSubmit={handleSubmit} style={{ display: "flex", flexWrap: "wrap", gap: "8px", alignItems: "center" }}>
+          <input
+            style={{ ...styles.input, width: "140px", padding: "8px", marginBottom: "0" }}
+            type="date"
+            max={today}
+            value={selectedDate}
+            onChange={(e) => setSelectedDate(e.target.value)}
+          />
           <select
-  style={styles.input}
-  value={type}
-  onChange={(e) => {
-    setType(e.target.value);
-
-    // reset quantity when switching type
-    if (e.target.value === "Expense") {
-      setQuantity("");
-    }
-  }}
->
-  <option value="Income">Income</option>
-  <option value="Expense">Expense</option>
-</select>
-          {/* ✅ NEW: Show only when Income */}
+            style={{ ...styles.input, width: "120px", padding: "8px", marginBottom: "0" }}
+            value={type}
+            onChange={(e) => {
+              setType(e.target.value);
+              if (e.target.value === "Expense") {
+                setQuantity("");
+              }
+            }}
+          >
+            <option value="Income">Income</option>
+            <option value="Expense">Expense</option>
+          </select>
+          <select
+            style={{ ...styles.input, width: "140px", padding: "8px", marginBottom: "0" }}
+            value={description}
+            onChange={(e) => setDescription(e.target.value)}
+          >
+            <option value="" disabled>Select Category</option>
+            {categories.length ? categories.map((c) => (
+              <option key={c} value={c}>{c}</option>
+            )) : <option value="">No categories</option>}
+          </select>
           {type === "Income" && (
-            <input 
-            style={styles.input} 
-            type="number" 
-            placeholder="Quantity" 
-            value={quantity} 
-            onChange={(e) => setQuantity(e.target.value)} />
-            )}
-          <input style={styles.input} type="date" max={today} value={selectedDate} onChange={(e) => setSelectedDate(e.target.value)} />
-          {type === "Income" ? (
-            <select style={styles.input} value={description} onChange={(e) => setDescription(e.target.value)}>
-              {categories.length ? categories.map((c) => (
-                <option key={c} value={c}>{c}</option>
-              )) : <option value="">No categories</option>}
-            </select>
-          ) : (
-            <input style={styles.input} type="text" placeholder="Description" value={description} onChange={(e) => setDescription(e.target.value)} />
+            <input
+              style={{ ...styles.input, width: "100px", padding: "8px", marginBottom: "0" }}
+              type="number"
+              placeholder="Qty"
+              value={quantity}
+              onChange={(e) => setQuantity(e.target.value)}
+            />
           )}
-
           {type === "Income" && (
-            <select style={styles.input} value={unit} onChange={(e) => setUnit(e.target.value)}>
-              <option value="unit">Per unit</option>
-              <option value="cup">Per cup</option>
-              <option value="kilo">Per kilo</option>
+            <select
+              style={{ ...styles.input, width: "100px", padding: "8px", marginBottom: "0" }}
+              value={unit}
+              onChange={(e) => setUnit(e.target.value)}
+            >
+              <option value="unit">Unit</option>
+              <option value="cup">Cup</option>
+              <option value="kilo">Kilo</option>
             </select>
           )}
-          <input style={styles.input} type="number" placeholder="Amount" value={amount} onChange={(e) => setAmount(e.target.value)} />
-          <button type="submit" style={{...styles.primaryBtn("#57bc90"), width: "100%"}}>Submit</button>
+          <input
+            style={{ ...styles.input, width: "100px", padding: "8px", marginBottom: "0" }}
+            type="number"
+            placeholder="Amount"
+            value={amount}
+            onChange={(e) => setAmount(e.target.value)}
+          />
+          <button
+            type="submit"
+            disabled={!isFormValid}
+            style={isFormValid ? styles.primaryBtn("#57bc90") : styles.disabledBtn}
+          >
+            Submit
+          </button>
         </form>
       </div>
 
@@ -584,10 +795,10 @@ useEffect(() => {
           <table style={styles.table}>
             <thead>
                 <tr>
-                 <th style={styles.th}>Date</th>
+                 <th style={styles.th}>Date & Time</th>
                   <th style={styles.th}>Description</th>
                   <th style={styles.th}>Type</th>
-                  <th style={styles.th}>Quantity</th> {/* moved here */}
+                  <th style={styles.th}>Quantity</th>
                   <th style={styles.th}>Amount</th>
                   <th style={styles.th}>Added By</th>
                   <th style={styles.th}>Action</th>
@@ -597,7 +808,21 @@ useEffect(() => {
   {filteredSubmissions.map((item) => (
     <tr key={item._id}>
       <td style={styles.td}>
-        {new Date(item.date).toLocaleDateString()}
+        {(() => {
+          const rawDate = item.timestamp || item.createdAt || item.date;
+          const parsed = new Date(rawDate);
+          return Number.isNaN(parsed.getTime())
+            ? "Invalid date"
+            : parsed.toLocaleString("en-US", {
+                month: "2-digit",
+                day: "2-digit",
+                year: "numeric",
+                hour: "numeric",
+                minute: "2-digit",
+                second: "2-digit",
+                hour12: true,
+              });
+        })()}
       </td>
 
   <td style={styles.td}>{`${item.category || item.description}${item.unit ? ` (${item.unit})` : ''}`}</td>
@@ -646,8 +871,67 @@ useEffect(() => {
           </table>
         </div>
       </div>
+
+      {/* ✅ DELETE CONFIRMATION MODAL */}
+      <ConfirmationModal
+        isOpen={deleteConfirmation.show}
+        title="Delete Daily Report"
+        message="Are you sure you want to delete this report? This action cannot be undone."
+        actionType="delete"
+        onConfirm={confirmDelete}
+        onCancel={() => setDeleteConfirmation({ show: false, isLoading: false, recordId: null })}
+        isLoading={deleteConfirmation.isLoading}
+      />
+
+      {/* ✅ OPERATION SUCCESS/ERROR MESSAGE */}
+      {operationMessage.show && (
+        <div style={{
+          position: "fixed",
+          top: "20px",
+          right: "20px",
+          background: operationMessage.type === "success" ? "#2d8a64" : "#d62828",
+          color: "white",
+          padding: "16px 24px",
+          borderRadius: "8px",
+          zIndex: 2000,
+          boxShadow: "0 4px 12px rgba(0,0,0,0.15)",
+          fontSize: "0.95rem",
+          fontWeight: "500",
+          animation: "slideIn 0.3s ease-out"
+        }}>
+          {operationMessage.message}
+        </div>
+      )}
+
+      <style>{`
+        @keyframes slideIn {
+          from {
+            transform: translateX(400px);
+            opacity: 0;
+          }
+          to {
+            transform: translateX(0);
+            opacity: 1;
+          }
+        }
+      `}</style>
     </div>
   );
 };
+
+
+// ✅ ADD SPINNER ANIMATION STYLES
+const spinnerStyles = `
+  @keyframes spin {
+    to { transform: rotate(360deg); }
+  }
+`;
+
+// Inject spinner styles
+if (typeof document !== "undefined") {
+  const styleSheet = document.createElement("style");
+  styleSheet.textContent = spinnerStyles;
+  document.head.appendChild(styleSheet);
+}
 
 export default ReportsPage;

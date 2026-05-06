@@ -64,7 +64,10 @@ const EmployeeEarnings = () => {
     try {
       const response = await fetch("http://localhost:5000/api/earnings", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { 
+          "Content-Type": "application/json",
+          "userid": user._id || user.id || ""
+        },
        body: JSON.stringify({
   employeeEmail: user.email,
   amount: Number(amount),

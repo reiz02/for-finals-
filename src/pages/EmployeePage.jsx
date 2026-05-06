@@ -1,15 +1,24 @@
 import React, { useState, useEffect } from "react";
 import "./EmployeePage.css";
 import { FaUsers, FaUserCheck } from "react-icons/fa";
+import ConfirmationModal from "../components/ConfirmationModal";
 
 function EmployeePage() {
+  const user = JSON.parse(localStorage.getItem("user") || "null");
   const [employees, setEmployees] = useState([]);
   const [loading, setLoading] = useState(true);
 
   const [dialog, setDialog] = useState({
     show: false,
     employeeId: null,
+    employeeName: null,
     action: null,
+    isLoading: false,
+  });
+
+  const [successMessage, setSuccessMessage] = useState({
+    show: false,
+    message: "",
   });
 
   const fetchEmployees = async (isInitialLoad = false) => {
@@ -37,7 +46,7 @@ function EmployeePage() {
     try {
       const res = await fetch(
         `http://localhost:5000/api/employees/approve/${id}`,
-        { method: "PUT" }
+        { method: "PUT", headers: { userid: user?.id } }
       );
       if (res.ok) fetchEmployees(false);
     } catch (err) {
@@ -142,10 +151,12 @@ function EmployeePage() {
                               setDialog({
                                 show: true,
                                 employeeId: emp._id,
+                                employeeName: `${emp.firstName} ${emp.lastName}`,
                                 action:
                                   emp.status === "deactivated"
                                     ? "reactivate"
                                     : "deactivate",
+                                isLoading: false,
                               })
                             }
                           >
@@ -164,97 +175,74 @@ function EmployeePage() {
         )}
       </div>
 
-      {/* ✅ CONFIRMATION DIALOG (ADDED ONLY) */}
-      {/* ✅ CONFIRMATION DIALOG */}
-{dialog.show && (
-  <div
-    style={{
-      position: "fixed",
-      top: 0,
-      left: 0,
-      width: "100%",
-      height: "100%",
-      background: "rgba(0,0,0,0.5)",
-      display: "flex",
-      alignItems: "center",
-      justifyContent: "center",
-    }}
-  >
-    <div
-      style={{
-        background: "#fff",
-        padding: "25px",
-        borderRadius: "12px",
-        textAlign: "center",
-        width: "350px",
-      }}
-    >
-      <h3>Confirmation</h3>
+      {/* ✅ CONFIRMATION MODAL */}
+      <ConfirmationModal
+        isOpen={dialog.show}
+        title="Confirm Account Status Change"
+        message={
+          dialog.action === "deactivate"
+            ? "Are you sure you want to deactivate this employee? They will no longer have access to the system."
+            : "Are you sure you want to reactivate this employee? They will regain access to the system."
+        }
+        employeeName={dialog.employeeName}
+        actionType={dialog.action}
+        isLoading={dialog.isLoading}
+        onConfirm={async () => {
+          setDialog({ ...dialog, isLoading: true });
+          try {
+            const endpoint =
+              dialog.action === "deactivate"
+                ? `http://localhost:5000/api/employees/deactivate/${dialog.employeeId}`
+                : `http://localhost:5000/api/employees/reactivate/${dialog.employeeId}`;
 
-      <p style={{ marginTop: "10px" }}>
-        Are you really want to{" "}
-        <b>{dialog.action}</b> this account?
-      </p>
+            const res = await fetch(endpoint, { method: "PUT", headers: { userid: user?.id } });
 
-      {/* ✅ CENTER BUTTONS */}
-      <div
-        style={{
-          display: "flex",
-          justifyContent: "center",
-          gap: "15px",
-          marginTop: "20px",
-        }}
-      >
-        <button
-          style={{
-            background: "#ef4444",
-            color: "#fff",
-            border: "none",
-            padding: "10px 18px",
-            borderRadius: "6px",
-            cursor: "pointer",
-            minWidth: "90px",
-          }}
-          onClick={async () => {
-            try {
-              const res = await fetch(
-                `http://localhost:5000/api/employees/deactivate/${dialog.employeeId}`,
-                { method: "PUT" }
-              );
-
-              if (res.ok) {
-                fetchEmployees(false);
+            if (res.ok) {
+              fetchEmployees(false);
+              setDialog({
+                show: false,
+                employeeId: null,
+                employeeName: null,
+                action: null,
+                isLoading: false,
+              });
+              
+              // Show success message for reactivation
+              if (dialog.action === "reactivate") {
+                setSuccessMessage({
+                  show: true,
+                  message: "Employee Account Reactivated Successfully",
+                });
+                setTimeout(() => setSuccessMessage({ show: false, message: "" }), 3000);
               }
-            } catch (err) {
-              console.error(err);
-            } finally {
-              setDialog({ show: false, employeeId: null, action: null });
             }
-          }}
-        >
-          Yes
-        </button>
-
-        <button
-          style={{
-            background: "#e5e7eb",
-            color: "#111",
-            border: "none",
-            padding: "10px 18px",
-            borderRadius: "6px",
-            cursor: "pointer",
-            minWidth: "90px",
-          }}
-          onClick={() =>
-            setDialog({ show: false, employeeId: null, action: null })
+          } catch (err) {
+            console.error(err);
+            setDialog({ ...dialog, isLoading: false });
           }
-        >
-          Cancel
-        </button>
-      </div>
-    </div>
-  </div>
-)}
+        }}
+        onCancel={() =>
+          setDialog({
+            show: false,
+            employeeId: null,
+            employeeName: null,
+            action: null,
+            isLoading: false,
+          })
+        }
+      />
+
+      {/* ✅ SUCCESS MESSAGE MODAL */}
+      {successMessage.show && (
+        <div style={{ position: "fixed", inset: 0, background: "rgba(15, 23, 42, 0.4)", backdropFilter: "blur(4px)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1200 }}>
+          <div style={{ background: "#dcfce7", padding: "30px", borderRadius: "20px", textAlign: "center", width: "320px", border: "2px solid #16a34a" }}>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "10px", marginBottom: "15px" }}>
+              <span style={{ fontSize: "24px" }}>✓</span>
+              <p style={{ fontWeight: "700", margin: 0, color: "#15803d", fontSize: "1.1rem" }}>{successMessage.message}</p>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

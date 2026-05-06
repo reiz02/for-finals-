@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import { useLocation, useNavigate } from 'react-router-dom';
 import { Plus, Image as ImageIcon, Package, AlertTriangle, Star, Eye } from "lucide-react";
+import ConfirmationModal from "../components/ConfirmationModal";
 
 function StockPage() {
   const location = useLocation();
@@ -27,6 +28,8 @@ function StockPage() {
   const [editingProduct, setEditingProduct] = useState(null); // Track the product being edited
   const [modal, setModal] = useState({ show: false, message: "", type: "alert", onConfirm: null });
   const [viewProduct, setViewProduct] = useState(null); // product currently viewed in modal
+  const [updateConfirmation, setUpdateConfirmation] = useState({ show: false, isLoading: false }); // For update confirmation modal
+  const [successMessage, setSuccessMessage] = useState({ show: false, message: "" }); // For success message
 
   const isMounted = useRef(true);
 
@@ -143,6 +146,8 @@ function StockPage() {
     if (image) formData.append("image", image); // Include new image if selected
 
     try {
+      setUpdateConfirmation({ show: false, isLoading: true });
+
       const res = await fetch(`http://localhost:5000/api/products/${id}`, {
         method: "PUT",
         headers: { "userid": user?.id },
@@ -154,12 +159,16 @@ function StockPage() {
         setEditingProduct(null); // Reset the editing state
         setName(""); setPrice(""); setStock(""); setImage(null); setPreview(""); // Clear the form
         fetchProducts(); // Refresh the product list
-        setModal({ show: true, message: "Product updated successfully!" });
+        setSuccessMessage({ show: true, message: "Product updated successfully!" });
+        // Auto-hide success message after 3 seconds
+        setTimeout(() => setSuccessMessage({ show: false, message: "" }), 3000);
       } else {
+        setUpdateConfirmation({ show: false, isLoading: false });
         setModal({ show: true, message: data.error || "Failed to update product", type: "error" });
       }
     } catch (error) {
       console.error("Error updating product:", error);
+      setUpdateConfirmation({ show: false, isLoading: false });
       setModal({ show: true, message: "Error updating product", type: "error" });
     }
   };
@@ -309,7 +318,7 @@ function StockPage() {
             </label>
           </div>
 
-          <button onClick={editingProduct ? () => updateProduct(editingProduct._id) : addProduct} style={addBtn}>
+          <button onClick={editingProduct ? () => setUpdateConfirmation({ show: true, isLoading: false }) : addProduct} style={addBtn}>
             {editingProduct ? "Update Product" : "Add to Inventory"}
           </button>
         </div>
@@ -390,6 +399,30 @@ function StockPage() {
             <div style={{display:'flex', gap:'10px', justifyContent:'center'}}>
               <button onClick={() => { if(modal.onConfirm) modal.onConfirm(); setModal({show:false}); }} style={confirmBtn}>Confirm</button>
               {modal.type === "confirm" && <button onClick={()=>setModal({show:false})} style={cancelBtn}>Cancel</button>}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ✅ UPDATE PRODUCT CONFIRMATION MODAL */}
+      <ConfirmationModal
+        isOpen={updateConfirmation.show}
+        title="Confirm Update"
+        message={`Are you sure you want to update "${editingProduct?.name || "this product"}"? Please review all changes before confirming.`}
+        employeeName={`₱${price || editingProduct?.price} • Stock: ${stock || editingProduct?.stock}`}
+        actionType="update"
+        isLoading={updateConfirmation.isLoading}
+        onConfirm={() => updateProduct(editingProduct._id)}
+        onCancel={() => setUpdateConfirmation({ show: false, isLoading: false })}
+      />
+
+      {/* ✅ SUCCESS MESSAGE MODAL */}
+      {successMessage.show && (
+        <div style={{ ...modalOverlay, zIndex: 1200 }}>
+          <div style={{ ...modalBox, background: '#dcfce7', border: '2px solid #16a34a' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px', marginBottom: '15px' }}>
+              <span style={{ fontSize: '24px' }}>✓</span>
+              <p style={{ fontWeight: '700', margin: 0, color: '#15803d', fontSize: '1.1rem' }}>{successMessage.message}</p>
             </div>
           </div>
         </div>
