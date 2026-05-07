@@ -181,11 +181,13 @@ const recomputeBestSeller = async () => {
     { $limit: 1 }
   ]);
 
-  if (agg && agg.length > 0) {
+  // ✅ FIX: Only set bestSeller if there are Income entries AND totalQty > 0
+  if (agg && agg.length > 0 && agg[0].totalQty > 0) {
     const topCategory = agg[0]._id;
     await Product.updateMany({}, { $set: { bestSeller: false } });
     await Product.updateMany({ $or: [{ category: topCategory }, { name: topCategory }] }, { $set: { bestSeller: true } });
   } else {
+    // No income entries or total quantity is 0 -> clear all bestSeller flags
     await Product.updateMany({}, { $set: { bestSeller: false } });
   }
 };
@@ -943,6 +945,11 @@ app.delete("/api/earnings/:id", async (req, res) => {
       else report.dailyHistory.push({ date: todayIso, total: newDaily });
 
       await report.save();
+    }
+
+    // ✅ NEW: Recalculate best seller after deletion
+    if (earning.type === "Income") {
+      await recomputeBestSeller();
     }
 
     // ✅ NEW: Stock Restoration Logic for Income entries

@@ -102,16 +102,26 @@ function Dashboard() {
   // Listen for product updates (best-seller changes or deletes) from StockPage
   useEffect(() => {
     const onProductsUpdated = () => fetchBestSeller();
+    const onEarningsUpdated = () => {
+      fetchData();
+      fetchBestSeller();
+    };
     const onStorage = (e) => {
       if (e.key === 'products:updated') fetchBestSeller();
+      if (e.key === 'earnings:updated') {
+        fetchData();
+        fetchBestSeller();
+      }
     };
     window.addEventListener('products:updated', onProductsUpdated);
+    window.addEventListener('earnings:updated', onEarningsUpdated);
     window.addEventListener('storage', onStorage);
     return () => {
       window.removeEventListener('products:updated', onProductsUpdated);
+      window.removeEventListener('earnings:updated', onEarningsUpdated);
       window.removeEventListener('storage', onStorage);
     };
-  }, [fetchBestSeller]);
+  }, [fetchBestSeller, fetchData]);
 
   // No auto-advance: user navigates best-sellers via dots. Keep bestIndex state only.
 
@@ -188,7 +198,9 @@ function Dashboard() {
         {/* Best Seller Product (admin-marked) */}
         <div style={{ flex: 1, minWidth: 220, backgroundColor: "#fff", padding: "12px", borderRadius: "14px", boxShadow: softShadow, borderLeft: `4px solid #f59e0b` }}>
           <div style={{ fontSize: "10px", fontWeight: "700", color: "#94a3b8", letterSpacing: "0.5px", marginBottom: "6px" }}>BEST SELLER</div>
-            {bestSellers && bestSellers.length > 0 ? (
+            {reportData.totalIncome <= 0 ? (
+              <div style={{ color: '#64748b', fontSize: 13 }}>No sales data available</div>
+            ) : bestSellers && bestSellers.length > 0 ? (
               <div style={{ width: '100%', overflow: 'hidden' }}>
                 {/* visible window */}
                 <div style={{ height: 78, position: 'relative', overflow: 'hidden' }}>
