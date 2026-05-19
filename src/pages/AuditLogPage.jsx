@@ -77,28 +77,40 @@ const AuditLogPage = () => {
 
   const formatChanges = (log) => {
     const { previousValues, newValues } = log;
+    const hasPreviousValues = previousValues && Object.keys(previousValues).length > 0;
+    const hasNewValues = newValues && Object.keys(newValues).length > 0;
 
-    if (!previousValues && !newValues) return "No changes";
+    if (!hasPreviousValues && !hasNewValues) return "No changes";
 
-    // For new report submissions
-    if (!previousValues && newValues) {
-      const { type, item, amount, quantity } = newValues;
-      return `New Report: ${type} | ${item} | Qty: ${quantity} | P${amount}`;
+    if (!hasPreviousValues && hasNewValues) {
+      // New stock/product creation
+      if (newValues.name || newValues.category || newValues.stock || newValues.price) {
+        return `Added Stock: ${newValues.name || newValues.category || "Unnamed"} | Category: ${newValues.category || "N/A"} | Qty: ${newValues.stock ?? "N/A"} | Price: P${newValues.price ?? "N/A"}`;
+      }
+
+      // New report submissions
+      if (newValues.type || newValues.item || newValues.amount || newValues.quantity) {
+        const { type, item, amount, quantity } = newValues;
+        return `New Report: ${type || "N/A"} | ${item || "N/A"} | Qty: ${quantity ?? "N/A"} | P${amount ?? "N/A"}`;
+      }
+
+      // Generic new object format
+      return Object.entries(newValues)
+        .map(([key, value]) => `${key}: ${value ?? "N/A"}`)
+        .join(" | ");
     }
 
-    // For edits
-    if (previousValues && newValues) {
+    if (hasPreviousValues && hasNewValues) {
       const changes = [];
       Object.keys(newValues).forEach(key => {
         if (previousValues[key] !== newValues[key]) {
-          changes.push(`${key}: ${previousValues[key] || "N/A"} → ${newValues[key]}`);
+          changes.push(`${key}: ${previousValues[key] ?? "N/A"} → ${newValues[key]}`);
         }
       });
       return changes.length > 0 ? changes.join(" | ") : "No changes";
     }
 
-    // For deletes or other cases, keep original format
-    if (previousValues && !newValues) {
+    if (hasPreviousValues && !hasNewValues) {
       const changes = [];
       Object.keys(previousValues).forEach(key => {
         changes.push(`${key}: ${previousValues[key]}`);

@@ -15,6 +15,7 @@ function StockPage() {
       return null;
     }
   }, []);
+  const userId = useMemo(() => user?._id || user?.id || "", [user]);
   const [products, setProducts] = useState([]);
 
   const [name, setName] = useState("");
@@ -38,7 +39,7 @@ function StockPage() {
     const signal = controller.signal;
     try {
       const res = await fetch("http://localhost:5000/api/products", {
-        headers: { "userid": user?.id },
+        headers: { "userid": userId },
         signal,
       });
       const data = await res.json();
@@ -50,7 +51,7 @@ function StockPage() {
       if (isMounted.current) setProducts([]);
     }
     return () => controller.abort();
-  }, [user?.id]);
+  }, [userId]);
 
   useEffect(() => { fetchProducts(); }, [fetchProducts]);
 
@@ -118,7 +119,7 @@ function StockPage() {
 
       const res = await fetch(endpoint, {
         method,
-        headers: { "userid": user?.id },
+        headers: { "userid": user?._id || user?.id },
         body: formData,
       });
 
@@ -150,7 +151,7 @@ function StockPage() {
 
       const res = await fetch(`http://localhost:5000/api/products/${id}`, {
         method: "PUT",
-        headers: { "userid": user?.id },
+        headers: { "userid": user?._id || user?.id },
         body: formData,
       });
 
@@ -180,7 +181,7 @@ function StockPage() {
   try {
     const res = await fetch(`http://localhost:5000/api/products/${id}`, {
       method: 'DELETE',
-      headers: { 'userid': user?.id }
+      headers: { 'userid': user?._id || user?.id }
     });
 
     if (res.ok) {
@@ -200,6 +201,8 @@ function StockPage() {
       }
 
       await fetchProducts();
+      setSuccessMessage({ show: true, message: "Product deleted successfully!" });
+      setTimeout(() => setSuccessMessage({ show: false, message: "" }), 3000);
 
       try {
         localStorage.setItem('products:updated', Date.now().toString());

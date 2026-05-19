@@ -453,6 +453,23 @@ app.post("/api/reset-password", async (req, res) => {
       { password: hashed }
     );
 
+    const updatedUser = await User.findOne({ email: normalizedEmail });
+    if (updatedUser) {
+      try {
+        await AuditLog.createLog(
+          updatedUser._id,
+          updatedUser.role,
+          "Reset password",
+          `${updatedUser.firstName} ${updatedUser.lastName}`.trim() || updatedUser.email,
+          {},
+          { passwordReset: true },
+          updatedUser._id
+        );
+      } catch (auditErr) {
+        console.error("Audit logging failed for password reset:", auditErr);
+      }
+    }
+
     // Remove the code after use
     delete verificationCodes[normalizedEmail];
 
@@ -488,8 +505,26 @@ app.put("/api/employees/approve/:id", async (req, res) => {
 
     if (!emp) return res.status(404).json({ error: "Employee not found" });
 
+    const currentUser = await User.findById(req.headers.userid);
+    const currentUserRole = currentUser?.role || currentUser?.position || "admin";
+
+    const previousStatus = emp.status;
     emp.status = "approved";
     await emp.save();
+
+    try {
+      await AuditLog.createLog(
+        req.headers.userid,
+        currentUserRole,
+        "Approved employee account",
+        `${emp.firstName} ${emp.lastName}`.trim(),
+        { status: previousStatus },
+        { status: "approved" },
+        emp._id
+      );
+    } catch (auditErr) {
+      console.error("Audit logging failed for employee approval:", auditErr);
+    }
 
     res.json({ message: "Employee approved", employee: emp });
   } catch (err) {
@@ -593,7 +628,29 @@ app.put("/api/employees/reactivate/:id", async (req, res) => {
 // DELETE EMPLOYEE
 app.delete("/api/employees/:id", async (req, res) => {
   try {
-    await User.findByIdAndDelete(req.params.id);
+    const emp = await User.findById(req.params.id);
+    if (!emp) return res.status(404).json({ error: "Employee not found" });
+
+    const currentUser = await User.findById(req.headers.userid);
+    const currentUserRole = currentUser?.role || currentUser?.position || "admin";
+    const employeeName = `${emp.firstName} ${emp.lastName}`.trim() || emp.email;
+
+    await emp.deleteOne();
+
+    try {
+      await AuditLog.createLog(
+        req.headers.userid,
+        currentUserRole,
+        "Deleted employee account",
+        employeeName,
+        { status: emp.status, role: emp.role, section: emp.section, email: emp.email },
+        {},
+        emp._id
+      );
+    } catch (auditErr) {
+      console.error("Audit logging failed for employee delete:", auditErr);
+    }
+
     res.json({ message: "Employee deleted" });
   } catch (err) {
     res.status(500).json({ error: "Delete failed" });
@@ -615,6 +672,33 @@ app.post("/api/products", inventoryAccess, upload.single("image"), async (req, r
       image: req.file ? `/uploads/${req.file.filename}` : ""
     });
     await product.save();
+
+    const currentUser = await User.findById(req.headers.userid);
+    const auditUserId = currentUser?._id || (await User.findOne({ role: "admin" }))?._id;
+    const currentUserRole = currentUser?.role || currentUser?.position || "admin";
+
+    if (auditUserId) {
+      try {
+        await AuditLog.createLog(
+          auditUserId,
+          currentUserRole,
+          "Added Stock",
+          "Stock",
+          {},
+          {
+            name: product.name,
+            category: product.category,
+            price: product.price,
+            stock: product.stock,
+            section: product.section,
+          },
+          product._id
+        );
+      } catch (auditErr) {
+        console.error("Audit logging failed for product creation:", auditErr);
+      }
+    }
+
     res.json(product);
   } catch (err) {
     res.status(500).json({ error: "Product creation failed" });
@@ -671,19 +755,24 @@ app.put("/api/products/:id", inventoryAccess, upload.single("image"), async (req
     const savedProduct = await product.save();
 
     try {
-      await AuditLog.createLog(
-        req.headers.userid,
-        currentUserRole,
-        "Updated Stock",
-        savedProduct.category || savedProduct.name,
-        previousValues,
-        {
-          name: savedProduct.name,
-          category: savedProduct.category,
-          price: savedProduct.price,
-          stock: savedProduct.stock
-        }
-      );
+      const auditUserId = currentUser?._id || (await User.findOne({ role: "admin" }))?._id;
+      if (auditUserId) {
+        await AuditLog.createLog(
+          auditUserId,
+          currentUserRole,
+          "Updated Stock",
+          "Stock",
+          previousValues,
+          {
+            name: savedProduct.name,
+            category: savedProduct.category,
+            price: savedProduct.price,
+            stock: savedProduct.stock,
+            section: savedProduct.section,
+          },
+          savedProduct._id
+        );
+      }
     } catch (auditError) {
       console.error("Audit logging failed for product update:", auditError);
     }
@@ -745,8 +834,42 @@ app.get('/api/best-sellers', async (req, res) => {
 });
 
 app.delete("/api/products/:id", inventoryAccess, async (req, res) => {
-  await Product.findByIdAndDelete(req.params.id);
-  res.json({ message: "Product deleted" });
+  try {
+    const product = await Product.findById(req.params.id);
+    if (!product) return res.status(404).json({ error: "Product not found" });
+
+    const currentUser = await User.findById(req.headers.userid);
+    const auditUserId = currentUser?._id || (await User.findOne({ role: "admin" }))?._id;
+    const currentUserRole = currentUser?.role || currentUser?.position || "admin";
+
+    await product.deleteOne();
+
+    if (auditUserId) {
+      try {
+        await AuditLog.createLog(
+          auditUserId,
+          currentUserRole,
+          "Deleted Stock",
+          "Stock",
+          {
+            name: product.name,
+            category: product.category,
+            price: product.price,
+            stock: product.stock,
+            section: product.section,
+          },
+          {},
+          product._id
+        );
+      } catch (auditErr) {
+        console.error("Audit logging failed for product delete:", auditErr);
+      }
+    }
+
+    res.json({ message: "Product deleted" });
+  } catch (err) {
+    res.status(500).json({ error: "Product deletion failed" });
+  }
 });
 
 // ===========================
@@ -768,6 +891,7 @@ app.post("/api/earnings", async (req, res) => {
 
     const now = date ? new Date(date) : new Date();
     const today = now.toISOString().split("T")[0];
+    const entryDate = now;
 
     if (isNaN(Number(amount))) {
       return res.status(400).json({ error: "Invalid amount" });
@@ -900,8 +1024,11 @@ app.post("/api/earnings", async (req, res) => {
     res.json({ message: "Earning recorded", earning: saved, report });
 
   } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: "Submit failed" });
+    console.error("Earnings submission failed:", err);
+    res.status(500).json({
+      error: "Submit failed",
+      details: err.message || "Unexpected server error"
+    });
   }
 });
 

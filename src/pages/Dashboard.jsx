@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
-import { FaCalendarAlt, FaChartLine } from "react-icons/fa";
+import { FaChartLine } from "react-icons/fa";
 import DailyEarningsGraph from "./DailyEarningsGraph";
 
 function Dashboard() {
@@ -9,7 +9,6 @@ function Dashboard() {
   const isLoggedIn = localStorage.getItem("isLoggedIn");
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
 
-  const [currentTime, setCurrentTime] = useState(new Date());
   const [reportData, setReportData] = useState({
     dailyEarnings: 0,
     totalIncome: 0,
@@ -29,7 +28,7 @@ function Dashboard() {
       const historyJson = await historyRes.json();
       const todayStr = new Date().toISOString().split('T')[0];
 
-      const todayNet = historyJson
+      const todayIncome = historyJson
         .filter(item => {
           const dateVal = item.date || item.createdAt;
           if (!dateVal) return false;
@@ -39,21 +38,23 @@ function Dashboard() {
         })
         .reduce((sum, item) => {
           const amt = Number(item.amount) || 0;
-          return item.type === "Expense" ? sum - amt : sum + amt;
+          const type = String(item.type || "").trim().toLowerCase();
+          return type === "expense" ? sum : sum + amt;
         }, 0);
 
-      const overallNet = historyJson.reduce((sum, item) => {
+      const overallIncome = historyJson.reduce((sum, item) => {
         const amt = Number(item.amount) || 0;
-        return item.type === "Expense" ? sum - amt : sum + amt;
+        const type = String(item.type || "").trim().toLowerCase();
+        return type === "expense" ? sum : sum + amt;
       }, 0);
 
       setReportData({
-        dailyEarnings: todayNet,
-        totalIncome: overallNet, 
+        dailyEarnings: todayIncome,
+        totalIncome: overallIncome,
         dailyHistory: historyJson
       });
 
-      console.log('[Dashboard] todayNet, overallNet', todayNet, overallNet);
+      console.log('[Dashboard] todayIncome, overallIncome', todayIncome, overallIncome);
 
     } catch (err) {
       console.error("Data fetch error:", err);
@@ -85,11 +86,6 @@ function Dashboard() {
       fetchBestSeller();
     }
   }, [isLoggedIn, navigate, user, fetchData, fetchBestSeller]);
-
-  useEffect(() => {
-    const clock = setInterval(() => setCurrentTime(new Date()), 1000);
-    return () => clearInterval(clock);
-  }, []);
 
   useEffect(() => {
     const interval = setInterval(() => {

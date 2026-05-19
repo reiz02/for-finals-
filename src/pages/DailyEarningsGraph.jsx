@@ -5,41 +5,60 @@ import {
 } from "recharts";
 
 const DailyEarningsGraph = ({ data, mintColor, selectedYear }) => {
-  
   const processData = (rawData) => {
-  const dailyMap = {};
+    const dailyMap = {};
+    const targetYear = Number(selectedYear);
 
-  const filtered = rawData.filter(item => {
-    const rawDate = item.date || item.createdAt;
-    const d = new Date(rawDate);
-    return !isNaN(d.getTime()) && d.getFullYear() === selectedYear;
-  });
-
-  const sortedData = filtered.sort((a, b) => new Date(a.date) - new Date(b.date));
-
-  sortedData.forEach(item => {
-    const rawDate = item.date || item.createdAt;
-    const d = new Date(rawDate);
-
-    const dateLabel = d.toLocaleDateString('en-US', {
-      month: 'short',
-      day: 'numeric'
+    const filtered = (rawData || []).filter(item => {
+      const rawDate = item.date || item.createdAt;
+      const d = new Date(rawDate);
+      return !isNaN(d.getTime()) && d.getFullYear() === targetYear;
     });
 
-    const amt = Number(item.amount) || 0;
+    const sortedData = filtered.sort((a, b) => new Date(a.date || a.createdAt) - new Date(b.date || b.createdAt));
 
-    if (!dailyMap[dateLabel]) dailyMap[dateLabel] = 0;
+    sortedData.forEach(item => {
+      const rawDate = item.date || item.createdAt;
+      const d = new Date(rawDate);
 
-    dailyMap[dateLabel] += item.type === 'Expense' ? -amt : amt;
-  });
+      const dateLabel = d.toLocaleDateString('en-US', {
+        month: 'short',
+        day: 'numeric'
+      });
 
-  return Object.keys(dailyMap).map(date => ({
-    name: date,
-    earnings: dailyMap[date]
-  })).slice(-7);
-};
+      const amt = Number(item.amount) || 0;
+      const type = (item.type || '').toLowerCase();
+
+      if (!dailyMap[dateLabel]) dailyMap[dateLabel] = 0;
+      dailyMap[dateLabel] += type === 'expense' ? -amt : amt;
+    });
+
+    return Object.keys(dailyMap).map(date => ({
+      name: date,
+      earnings: dailyMap[date]
+    })).slice(-7);
+  };
 
   const chartData = processData(data);
+
+  if (!chartData.length) {
+    return (
+      <div style={{
+        width: "100%",
+        height: "100%",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        color: "#64748b",
+        fontSize: "0.95rem",
+        fontWeight: 600,
+        backgroundColor: "#f8fafc",
+        borderRadius: "16px"
+      }}>
+        No revenue data available for the selected year.
+      </div>
+    );
+  }
 
   return (
     <ResponsiveContainer width="100%" height="100%">

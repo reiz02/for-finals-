@@ -48,7 +48,12 @@ function EmployeePage() {
         `http://localhost:5000/api/employees/approve/${id}`,
         { method: "PUT", headers: { userid: user?.id } }
       );
-      if (res.ok) fetchEmployees(false);
+
+      if (res.ok) {
+        fetchEmployees(false);
+        setSuccessMessage({ show: true, message: "Employee approved successfully." });
+        setTimeout(() => setSuccessMessage({ show: false, message: "" }), 3000);
+      }
     } catch (err) {
       console.error(err);
     }

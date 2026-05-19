@@ -43,10 +43,13 @@ const ReportsPage = () => {
   const [operationMessage, setOperationMessage] = useState({ show: false, message: "", type: "success" });
 
   const [editingItem, setEditingItem] = useState(null);
-  const [editForm, setEditForm] = useState({ date: "", description: "", type: "Income", amount: "" });
+  const [editForm, setEditForm] = useState({ date: "", time: "", description: "", type: "Income", amount: "" });
 
   const today = new Date().toISOString().split("T")[0];
+  const now = new Date();
+  const currentTime = `${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}`;
   const [selectedDate, setSelectedDate] = useState(today);
+  const [selectedTime, setSelectedTime] = useState(currentTime);
 
   const [quantity, setQuantity] = useState("");
   const [isFormValid, setIsFormValid] = useState(false);
@@ -266,8 +269,9 @@ useEffect(() => {
       return;
     }
 
-    // ✅ NEW: Stock validation for Income submissions
-    if (isIncome) {
+    // ✅ NEW: Only validate stock for Inventory users, so Finance users don't wait on /api/products.
+    const isInventoryUser = (user.role === "admin" || user.section === "Inventory");
+    if (isIncome && isInventoryUser) {
       try {
         const productsRes = await fetch("http://localhost:5000/api/products", {
           method: "GET",
@@ -320,8 +324,9 @@ useEffect(() => {
       const now = new Date();
       const dateTimestamp = (() => {
         if (selectedDate && /^\d{4}-\d{2}-\d{2}$/.test(selectedDate)) {
-          const [year, month] = selectedDate.split("-").map(Number); // eslint-disable-line no-unused-vars
-          return new Date(year, month - 1, now.getHours(), now.getMinutes(), now.getSeconds(), now.getMilliseconds()).toISOString();
+          const [year, month, day] = selectedDate.split("-").map(Number);
+          const [hours, minutes] = selectedTime.split(":").map(Number);
+          return new Date(year, month - 1, day, hours, minutes, now.getSeconds(), now.getMilliseconds()).toISOString();
         }
         return now.toISOString();
       })();
@@ -355,21 +360,29 @@ useEffect(() => {
         setAmount("");
         setDescription("");
         setSelectedDate(today);
+        const newNow = new Date();
+        const newTime = `${String(newNow.getHours()).padStart(2, "0")}:${String(newNow.getMinutes()).padStart(2, "0")}`;
+        setSelectedTime(newTime);
         setQuantity("");
 
-        await fetchSubmissions();
-        
-        // ✅ NEW: Show success message with proper styling
+        setSubmitConfirmation({ show: false, isLoading: false, summary: "" });
         setSuccessMessage({
           show: true,
           message: "Daily report added successfully!"
         });
         setTimeout(() => setSuccessMessage({ show: false, message: "" }), 3000);
-        
-        setSubmitConfirmation({ show: false, isLoading: false, summary: "" });
+
+        // Refresh submissions in the background so the UI is not blocked.
+        fetchSubmissions();
+      } else {
+        const errorData = await response.json().catch(() => ({}));
+        const message = errorData.error || "Unable to submit report. Please try again.";
+        setDialog({ show: true, message, type: "alert", onConfirm: () => setDialog(d => ({ ...d, show: false })) });
+        setSubmitConfirmation(prev => ({ ...prev, isLoading: false }));
       }
     } catch (err) {
       console.error("Submit error:", err);
+      setDialog({ show: true, message: "Unable to submit report. Please check your connection.", type: "alert", onConfirm: () => setDialog(d => ({ ...d, show: false })) });
       setSubmitConfirmation(prev => ({ ...prev, isLoading: false }));
     }
   };
@@ -433,9 +446,13 @@ useEffect(() => {
 
     // Prefer explicit category; if missing but description matches our known categories, use that
     const initialCategory = item.category || (categories.includes(item.description) ? item.description : "");
+    
+    const itemDate = new Date(item.date);
+    const timeStr = `${String(itemDate.getHours()).padStart(2, "0")}:${String(itemDate.getMinutes()).padStart(2, "0")}`;
 
     setEditForm({
-      date: new Date(item.date).toISOString().split("T")[0],
+      date: itemDate.toISOString().split("T")[0],
+      time: timeStr,
       description: item.description,
       category: initialCategory,
       unit: item.unit || "unit",
@@ -451,9 +468,18 @@ useEffect(() => {
   const handleUpdate = async () => {
     try {
       const isIncome = editForm.type?.toLowerCase() === "income";
+      
+      // Combine date and time into ISO timestamp
+      let dateTimestamp = editForm.date;
+      if (editForm.date && editForm.time) {
+        const [year, month, day] = editForm.date.split("-").map(Number);
+        const [hours, minutes] = editForm.time.split(":").map(Number);
+        dateTimestamp = new Date(year, month - 1, day, hours, minutes, 0, 0).toISOString();
+      }
 
       const payload = {
         ...editForm,
+        date: dateTimestamp,
         // For updates, treat editForm.amount as price-per-unit for Income entries
         amount: isIncome ? Number(editForm.amount) * Number(editForm.quantity || 0) : Number(editForm.amount),
         quantity: isIncome ? Number(editForm.quantity || 0) : 0,
@@ -649,6 +675,7 @@ useEffect(() => {
               <FaTimes style={{ cursor: "pointer" }} onClick={() => setEditingItem(null)} />
             </div>
             <input style={styles.input} type="date" max={today} value={editForm.date} onChange={(e) => setEditForm({...editForm, date: e.target.value})} />
+            <input style={styles.input} type="time" value={editForm.time || ""} onChange={(e) => setEditForm({...editForm, time: e.target.value})} />
             {editForm.type === 'Income' ? (
               <>
                 <select style={styles.input} value={editForm.category || ""} onChange={(e) => setEditForm({...editForm, category: e.target.value, description: e.target.value})}>
@@ -728,6 +755,12 @@ useEffect(() => {
             value={selectedDate}
             onChange={(e) => setSelectedDate(e.target.value)}
           />
+          <input
+            style={{ ...styles.input, width: "100px", padding: "8px", marginBottom: "0" }}
+            type="time"
+            value={selectedTime}
+            onChange={(e) => setSelectedTime(e.target.value)}
+          />
           <select
             style={{ ...styles.input, width: "120px", padding: "8px", marginBottom: "0" }}
             value={type}
@@ -735,22 +768,35 @@ useEffect(() => {
               setType(e.target.value);
               if (e.target.value === "Expense") {
                 setQuantity("");
+                setDescription("");
+              } else {
+                setDescription("");
               }
             }}
           >
             <option value="Income">Income</option>
             <option value="Expense">Expense</option>
           </select>
-          <select
-            style={{ ...styles.input, width: "140px", padding: "8px", marginBottom: "0" }}
-            value={description}
-            onChange={(e) => setDescription(e.target.value)}
-          >
-            <option value="" disabled>Select Category</option>
-            {categories.length ? categories.map((c) => (
-              <option key={c} value={c}>{c}</option>
-            )) : <option value="">No categories</option>}
-          </select>
+          {type === "Income" ? (
+            <select
+              style={{ ...styles.input, width: "140px", padding: "8px", marginBottom: "0" }}
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+            >
+              <option value="" disabled>Select Category</option>
+              {categories.length ? categories.map((c) => (
+                <option key={c} value={c}>{c}</option>
+              )) : <option value="">No categories</option>}
+            </select>
+          ) : (
+            <input
+              style={{ ...styles.input, width: "140px", padding: "8px", marginBottom: "0" }}
+              type="text"
+              placeholder="Expense details"
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+            />
+          )}
           {type === "Income" && (
             <input
               style={{ ...styles.input, width: "100px", padding: "8px", marginBottom: "0" }}
